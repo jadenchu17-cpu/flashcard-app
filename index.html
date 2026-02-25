@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Flashcard Study App</h1>
+        <div class="header-actions">
+            <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">Light Mode</button>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat">
+            <span class="stat-value" id="streak">0</span>
+            <span class="stat-label">Day Streak</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="today-studied">0</span>
+            <span class="stat-label">Studied Today</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="accuracy">0%</span>
+            <span class="stat-label">Accuracy</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value" id="best-streak">0</span>
+            <span class="stat-label">Best Streak</span>
+        </div>
+    </div>
+
+    <div class="folder-bar" id="folder-bar"></div>
+
+    <div class="deck-selector" id="deck-selector"></div>
+
+    <div class="progress hidden" id="progress-bar">
+        Card <span id="current-card">1</span> of <span id="total-cards">0</span>
+        <span id="review-label" class="review-label">— Reviewing Wrong Answers</span>
+    </div>
+
+    <div class="card-container" id="card-container">
+        <div class="card" id="flashcard" onclick="flipCard()">
+            <div class="card-front">
+                <p id="question">Select or create a deck to start!</p>
+            </div>
+            <div class="card-back">
+                <p id="answer">Answer will appear here</p>
+            </div>
+        </div>
+    </div>
+
+    <p class="flip-hint" id="flip-hint">Click card or press Space to flip</p>
+
+    <!-- Learn Mode Panel -->
+    <div id="learn-mode" class="learn-mode hidden">
+        <div class="learn-header">
+            <span class="learn-title">Learn Mode <span id="learn-round-info"></span></span>
+            <button class="learn-exit-btn" onclick="exitLearnMode()">Exit</button>
+        </div>
+        <div class="learn-progress-section">
+            <div class="learn-stats">
+                <span>Left: <strong id="learn-remaining">0</strong></span>
+                <span class="score-right">Correct: <strong id="learn-correct">0</strong></span>
+                <span class="score-wrong">Wrong: <strong id="learn-wrong">0</strong></span>
+            </div>
+            <div class="learn-progress-bar">
+                <div class="learn-bar-fill" id="learn-bar-fill"></div>
+            </div>
+        </div>
+        <div class="learn-question-card" id="learn-question-card">
+            <p id="learn-question"></p>
+        </div>
+        <div id="learn-mc" class="learn-mc hidden">
+            <div id="mc-options" class="mc-options"></div>
+        </div>
+        <div id="learn-type" class="learn-type hidden">
+            <div class="type-letter-hint" id="type-letter-hint"></div>
+            <div class="type-accept-note hidden" id="type-accept-note"></div>
+            <div class="type-input-row">
+                <input type="text" id="type-input" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')submitTypedAnswer()" />
+            </div>
+            <div class="type-actions">
+                <button class="hint-btn" onclick="getHint()">Hint</button>
+                <button class="modal-confirm" onclick="submitTypedAnswer()">Submit</button>
+            </div>
+        </div>
+        <div id="learn-feedback" class="learn-feedback hidden">
+            <div id="feedback-result" class="feedback-result"></div>
+            <p class="feedback-correct-label" id="feedback-correct-label">Correct answer:</p>
+            <p id="feedback-answer" class="feedback-answer"></p>
+            <button class="modal-confirm learn-continue-btn" onclick="nextLearnCard()">Continue</button>
+        </div>
+        <div id="learn-results" class="learn-results hidden">
+            <h2>Round Complete!</h2>
+            <div class="results-stats">
+                <div class="result-stat">
+                    <span class="result-value score-right" id="result-correct">0</span>
+                    <span class="result-label">Correct</span>
+                </div>
+                <div class="result-stat">
+                    <span class="result-value score-wrong" id="result-wrong">0</span>
+                    <span class="result-label">Wrong</span>
+                </div>
+                <div class="result-stat">
+                    <span class="result-value" id="result-accuracy">0%</span>
+                    <span class="result-label">Accuracy</span>
+                </div>
+            </div>
+            <div class="results-actions">
+                <button class="modal-cancel" onclick="exitLearnMode()">Done</button>
+                <button class="modal-confirm" id="retry-wrong-btn" onclick="retryWrongCards()">Retry Wrong (<span id="retry-count">0</span>)</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls hidden" id="controls">
+        <button class="nav-btn" onclick="prevCard()">Previous</button>
+        <button class="wrong-btn" onclick="markWrong()">Wrong</button>
+        <button class="right-btn" onclick="markRight()">Correct</button>
+        <button class="nav-btn" onclick="nextCard()">Next</button>
+    </div>
+
+    <div class="score hidden" id="score">
+        <span class="score-right">Correct: <span id="right-count">0</span></span>
+        <span class="score-wrong">Wrong: <span id="wrong-count">0</span></span>
+    </div>
+
+    <div class="action-buttons hidden" id="action-buttons">
+        <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
+        <button class="learn-btn" onclick="startLearnMode()">Learn</button>
+        <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
+        <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
+    </div>
+
+    <!-- Create Deck Modal -->
+    <div class="modal-overlay" id="create-deck-modal" onclick="closeModalOnOverlay(event, 'create-deck-modal')">
+        <div class="modal">
+            <h2>Create New Deck</h2>
+            <input type="text" id="new-deck-name" placeholder="Deck name (e.g., Biology)" onkeydown="if(event.key==='Enter')createDeck()" />
+            <div class="modal-buttons">
+                <button class="modal-cancel" onclick="closeModal('create-deck-modal')">Cancel</button>
+                <button class="modal-confirm" onclick="createDeck()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Deck Modal -->
+    <div class="modal-overlay" id="manage-modal" onclick="closeModalOnOverlay(event, 'manage-modal')">
+        <div class="modal manage-modal">
+            <h2>Manage: <span id="manage-deck-name"></span></h2>
+            <div class="folder-assign">
+                <label>Folder:</label>
+                <select id="deck-folder-select" onchange="assignDeckFolder()">
+                    <option value="">None</option>
+                </select>
+                <button class="folder-new-inline" onclick="createFolderFromManage()">+</button>
+            </div>
+            <div class="card-list" id="card-list"></div>
+            <div class="import-section">
+                <button class="import-toggle-btn" id="import-toggle-btn" onclick="toggleImport()">Paste / Import List</button>
+                <div class="import-area hidden" id="import-area">
+                    <textarea id="import-text" oninput="onImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;&#10;One card per line." rows="6"></textarea>
+                    <div class="import-actions">
+                        <span class="import-hint" id="import-preview">0 cards detected</span>
+                        <button class="modal-confirm" onclick="importCards()">Import All</button>
+                    </div>
+                </div>
+            </div>
+            <div class="add-card-form">
+                <h3 id="card-form-title">Add New Card</h3>
+                <textarea id="card-question" placeholder="Question / Front" rows="2"></textarea>
+                <button class="ai-define-btn" id="ai-define-btn" onclick="aiDefine()">AI Define</button>
+                <textarea id="card-answer" placeholder="Answer / Back" rows="2"></textarea>
+                <input type="hidden" id="edit-card-index" value="-1" />
+                <div class="card-form-buttons">
+                    <button class="modal-cancel" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none">Cancel Edit</button>
+                    <button class="modal-confirm" onclick="saveCard()">Save Card</button>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-cancel delete-deck-btn" onclick="deleteDeck()">Delete Deck</button>
+                <button class="modal-confirm" onclick="closeModal('manage-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="keyboard-hints">
+        <span>Space: Flip</span>
+        <span>Arrow Keys: Navigate</span>
+        <span>C: Correct</span>
+        <span>W: Wrong</span>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
