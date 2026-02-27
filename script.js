@@ -70,7 +70,7 @@ let expandedFolders = new Set();
 let learnActive = false;
 let learnState = {};
 let sidebarOpen = false;
-let markedCards = new Set(); // tracks which card indices have been marked in current session
+let deckMarkedCards = {};    // { "APUSH": Set([0,1,3]), ... } tracks marked cards per deck
 let draggedDeckName = null;  // for drag-and-drop
 let editingFolder = null;    // folder name being edited
 
@@ -387,7 +387,8 @@ function switchDeck(name) {
     exitLearnMode();
     currentDeckName = name; currentCards = decks[name]; currentIndex = 0;
     isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewMode = false;
-    markedCards = new Set();
+    // Restore (or create) the per-deck marked set
+    if (!deckMarkedCards[name]) deckMarkedCards[name] = new Set();
     document.getElementById("right-count").textContent = 0;
     document.getElementById("wrong-count").textContent = 0;
     document.getElementById("review-label").style.display = "none";
@@ -500,16 +501,18 @@ function prevCard() { if (currentCards.length === 0) return; if (currentIndex > 
 
 function markRight() {
     if (currentCards.length === 0) return;
-    if (markedCards.has(currentIndex)) return; // already marked this card
-    markedCards.add(currentIndex);
+    const marked = deckMarkedCards[currentDeckName];
+    if (marked && marked.has(currentIndex)) return; // already marked this card
+    if (marked) marked.add(currentIndex);
     rightCount++; document.getElementById("right-count").textContent = rightCount;
     recordStudy(true);
     nextCard();
 }
 function markWrong() {
     if (currentCards.length === 0) return;
-    if (markedCards.has(currentIndex)) return; // already marked this card
-    markedCards.add(currentIndex);
+    const marked = deckMarkedCards[currentDeckName];
+    if (marked && marked.has(currentIndex)) return; // already marked this card
+    if (marked) marked.add(currentIndex);
     wrongCount++;
     document.getElementById("wrong-count").textContent = wrongCount;
     const card = currentCards[currentIndex];
@@ -521,17 +524,17 @@ function markWrong() {
 function shuffleDeck() {
     if (currentCards.length === 0) return;
     for (let i = currentCards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]]; }
-    currentIndex = 0; markedCards = new Set(); updateCard();
+    currentIndex = 0; deckMarkedCards[currentDeckName] = new Set(); updateCard();
 }
 
 // ========== REVIEW WRONG ==========
 function toggleReviewMode() {
     if (reviewMode) { reviewMode = false; currentCards = decks[currentDeckName]; currentIndex = 0;
-        markedCards = new Set();
+        deckMarkedCards[currentDeckName] = new Set();
         document.getElementById("review-label").style.display = "none";
         document.getElementById("review-btn").classList.remove("active"); updateCard();
     } else { if (wrongCards.length === 0) return; reviewMode = true; currentCards = [...wrongCards]; currentIndex = 0;
-        markedCards = new Set();
+        deckMarkedCards[currentDeckName] = new Set();
         document.getElementById("review-label").style.display = "inline";
         document.getElementById("review-btn").classList.add("active"); updateCard(); }
 }
@@ -587,7 +590,7 @@ function resetDeckStats() {
     deckStats[currentDeckName] = { studied: 0, correct: 0 };
     saveDeckStats();
     // Clear the "already marked" tracker so Correct/Wrong buttons work again on all cards
-    markedCards = new Set();
+    deckMarkedCards[currentDeckName] = new Set();
     // Reset the session right/wrong counters and go back to card 1
     rightCount = 0; wrongCount = 0;
     document.getElementById("right-count").textContent = 0;
