@@ -148,6 +148,116 @@
                     </div>
                 </div>
 
+                <!-- Test Mode -->
+                <div id="test-mode" class="test-mode hidden">
+                    <!-- Config Screen -->
+                    <div id="test-config" class="test-config">
+                        <div class="learn-header">
+                            <span class="learn-title">Test Setup</span>
+                            <button class="learn-exit-btn" onclick="exitTestMode()">Cancel</button>
+                        </div>
+                        <p class="test-config-info">Choose how many of each question type. Total must be between 1 and <strong id="test-max-cards">0</strong>.</p>
+                        <div class="test-config-rows">
+                            <div class="test-config-row">
+                                <label>Multiple Choice</label>
+                                <div class="test-stepper">
+                                    <button onclick="adjustTestCount('mc', -1)">-</button>
+                                    <span id="test-mc-count">0</span>
+                                    <button onclick="adjustTestCount('mc', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="test-config-row">
+                                <label>Matching</label>
+                                <div class="test-stepper">
+                                    <button onclick="adjustTestCount('match', -1)">-</button>
+                                    <span id="test-match-count">0</span>
+                                    <button onclick="adjustTestCount('match', 1)">+</button>
+                                </div>
+                            </div>
+                            <div class="test-config-row">
+                                <label>Writing</label>
+                                <div class="test-stepper">
+                                    <button onclick="adjustTestCount('write', -1)">-</button>
+                                    <span id="test-write-count">0</span>
+                                    <button onclick="adjustTestCount('write', 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="test-config-total">
+                            Total: <strong id="test-total-count">0</strong> / <strong id="test-total-max">0</strong>
+                        </div>
+                        <button class="modal-confirm test-start-btn" id="test-start-btn" onclick="startTest()" disabled>Start Test</button>
+                    </div>
+
+                    <!-- Active Test -->
+                    <div id="test-active" class="hidden">
+                        <div class="learn-header">
+                            <span class="learn-title">Test <span id="test-progress-label"></span></span>
+                            <button class="learn-exit-btn" onclick="exitTestMode()">Exit</button>
+                        </div>
+                        <div class="learn-progress-bar" style="margin-bottom:20px">
+                            <div class="learn-bar-fill" id="test-bar-fill"></div>
+                        </div>
+
+                        <!-- MC Question -->
+                        <div id="test-q-mc" class="hidden">
+                            <div class="learn-question-card"><p id="test-mc-question"></p></div>
+                            <div class="mc-options" id="test-mc-options"></div>
+                        </div>
+
+                        <!-- Matching Question -->
+                        <div id="test-q-match" class="hidden">
+                            <p class="test-match-instruction">Drag each term to its matching definition</p>
+                            <div class="test-match-area">
+                                <div class="test-match-terms" id="test-match-terms"></div>
+                                <div class="test-match-defs" id="test-match-defs"></div>
+                            </div>
+                            <button class="modal-confirm test-submit-match" id="test-submit-match" onclick="submitMatching()">Submit Matching</button>
+                        </div>
+
+                        <!-- Writing Question -->
+                        <div id="test-q-write" class="hidden">
+                            <div class="learn-question-card"><p id="test-write-question"></p></div>
+                            <div class="type-input-row">
+                                <input type="text" id="test-write-input" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')submitWritingAnswer()" />
+                            </div>
+                            <button class="modal-confirm" onclick="submitWritingAnswer()" style="margin-top:10px">Submit</button>
+                        </div>
+
+                        <!-- Per-question feedback -->
+                        <div id="test-feedback" class="learn-feedback hidden">
+                            <div id="test-feedback-result" class="feedback-result"></div>
+                            <p class="feedback-correct-label" id="test-feedback-label">Correct answer:</p>
+                            <p id="test-feedback-answer" class="feedback-answer"></p>
+                            <button class="modal-confirm learn-continue-btn" onclick="nextTestQuestion()">Continue</button>
+                        </div>
+                    </div>
+
+                    <!-- Test Results -->
+                    <div id="test-results" class="learn-results hidden">
+                        <h2>Test Complete!</h2>
+                        <div class="results-stats">
+                            <div class="result-stat">
+                                <span class="result-value score-right" id="test-res-correct">0</span>
+                                <span class="result-label">Correct</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value score-wrong" id="test-res-wrong">0</span>
+                                <span class="result-label">Wrong</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value" id="test-res-accuracy">0%</span>
+                                <span class="result-label">Accuracy</span>
+                            </div>
+                        </div>
+                        <div class="test-results-breakdown" id="test-results-breakdown"></div>
+                        <div class="results-actions">
+                            <button class="modal-cancel" onclick="exitTestMode()">Done</button>
+                            <button class="modal-confirm" onclick="openTestConfig()">New Test</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="controls" id="controls">
                     <button class="nav-btn" onclick="prevCard()">Previous</button>
                     <button class="wrong-btn" onclick="markWrong()">Wrong</button>
@@ -163,6 +273,7 @@
                 <div class="action-buttons" id="action-buttons">
                     <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
                     <button class="learn-btn" onclick="startLearnMode()">Learn</button>
+                    <button class="test-btn" onclick="openTestConfig()">Test</button>
                     <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
                     <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
                 </div>

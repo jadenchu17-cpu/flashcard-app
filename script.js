@@ -360,7 +360,7 @@ function renderHomeGrid() {
 }
 
 function showHomeView() {
-    exitLearnMode();
+    exitLearnMode(); exitTestMode();
     currentDeckName = null;
     currentCards = [];
     document.getElementById("home-view").classList.remove("hidden");
@@ -384,7 +384,7 @@ function renderAll() {
 // ========== DECK MANAGEMENT ==========
 function switchDeck(name) {
     if (!decks[name]) return;
-    exitLearnMode();
+    exitLearnMode(); exitTestMode();
     currentDeckName = name; currentCards = decks[name]; currentIndex = 0;
     isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewMode = false;
     // Restore (or create) the per-deck marked set
@@ -928,6 +928,324 @@ async function aiDefine() {
     finally { btn.textContent = "AI Define"; btn.disabled = false; }
 }
 
+// ========== TEST MODE ==========
+let testActive = false;
+let testConfig = { mc: 0, match: 0, write: 0 };
+let testState = {};
+
+function openTestConfig() {
+    if (!currentDeckName || decks[currentDeckName].length < 2) {
+        alert("Need at least 2 cards to start a test."); return;
+    }
+    exitLearnMode();
+    testConfig = { mc: 0, match: 0, write: 0 };
+    const max = decks[currentDeckName].length;
+    document.getElementById("test-max-cards").textContent = max;
+    document.getElementById("test-total-max").textContent = max;
+    document.getElementById("test-mc-count").textContent = 0;
+    document.getElementById("test-match-count").textContent = 0;
+    document.getElementById("test-write-count").textContent = 0;
+    document.getElementById("test-total-count").textContent = 0;
+    document.getElementById("test-start-btn").disabled = true;
+    // Show test mode, config screen
+    testActive = true;
+    document.getElementById("card-container").classList.add("hidden");
+    document.getElementById("flip-hint").classList.add("hidden");
+    document.getElementById("controls").classList.add("hidden");
+    document.getElementById("score").classList.add("hidden");
+    document.getElementById("action-buttons").classList.add("hidden");
+    document.getElementById("progress-bar").classList.add("hidden");
+    document.getElementById("test-mode").classList.remove("hidden");
+    document.getElementById("test-config").classList.remove("hidden");
+    document.getElementById("test-active").classList.add("hidden");
+    document.getElementById("test-results").classList.add("hidden");
+}
+
+function adjustTestCount(type, delta) {
+    const max = decks[currentDeckName].length;
+    const total = testConfig.mc + testConfig.match + testConfig.write;
+    let val = testConfig[type] + delta;
+    if (val < 0) val = 0;
+    // Matching needs at least 2 items to be meaningful
+    if (type === "match" && val === 1) val = delta > 0 ? 2 : 0;
+    if (total - testConfig[type] + val > max) val = max - (total - testConfig[type]);
+    if (type === "match" && val === 1) val = 0;
+    testConfig[type] = val;
+    document.getElementById("test-" + type + "-count").textContent = val;
+    const newTotal = testConfig.mc + testConfig.match + testConfig.write;
+    document.getElementById("test-total-count").textContent = newTotal;
+    document.getElementById("test-start-btn").disabled = newTotal === 0;
+}
+
+function exitTestMode() {
+    testActive = false;
+    document.getElementById("test-mode").classList.add("hidden");
+    document.getElementById("card-container").classList.remove("hidden");
+    document.getElementById("flip-hint").classList.remove("hidden");
+    if (currentDeckName) {
+        document.getElementById("controls").classList.remove("hidden");
+        document.getElementById("score").classList.remove("hidden");
+        document.getElementById("action-buttons").classList.remove("hidden");
+        document.getElementById("progress-bar").classList.remove("hidden");
+    }
+}
+
+function startTest() {
+    const total = testConfig.mc + testConfig.match + testConfig.write;
+    if (total === 0) return;
+    const allCards = [...decks[currentDeckName]].sort(() => Math.random() - 0.5);
+    const picked = allCards.slice(0, total);
+    // Distribute cards to question types
+    let idx = 0;
+    const mcCards = picked.slice(idx, idx + testConfig.mc); idx += testConfig.mc;
+    const matchCards = picked.slice(idx, idx + testConfig.match); idx += testConfig.match;
+    const writeCards = picked.slice(idx, idx + testConfig.write);
+    // Build question queue
+    const questions = [];
+    mcCards.forEach(c => questions.push({ type: "mc", card: c }));
+    if (matchCards.length >= 2) questions.push({ type: "match", cards: matchCards });
+    writeCards.forEach(c => questions.push({ type: "write", card: c }));
+    // Shuffle non-match questions around (keep match as one block)
+    const nonMatch = questions.filter(q => q.type !== "match");
+    const matchQ = questions.filter(q => q.type === "match");
+    for (let i = nonMatch.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [nonMatch[i], nonMatch[j]] = [nonMatch[j], nonMatch[i]];
+    }
+    // Insert match block at a random position
+    const finalQ = [...nonMatch];
+    if (matchQ.length > 0) {
+        const pos = Math.floor(Math.random() * (finalQ.length + 1));
+        finalQ.splice(pos, 0, ...matchQ);
+    }
+    testState = {
+        questions: finalQ,
+        currentIdx: 0,
+        correct: 0,
+        wrong: 0,
+        mcCorrect: 0, mcWrong: 0,
+        matchCorrect: 0, matchWrong: 0,
+        writeCorrect: 0, writeWrong: 0,
+        totalQuestions: total,
+        matchPairs: {} // for matching: { defIndex: termText }
+    };
+    document.getElementById("test-config").classList.add("hidden");
+    document.getElementById("test-active").classList.remove("hidden");
+    document.getElementById("test-results").classList.add("hidden");
+    showTestQuestion();
+}
+
+function showTestQuestion() {
+    document.getElementById("test-feedback").classList.add("hidden");
+    document.getElementById("test-q-mc").classList.add("hidden");
+    document.getElementById("test-q-match").classList.add("hidden");
+    document.getElementById("test-q-write").classList.add("hidden");
+    if (testState.currentIdx >= testState.questions.length) { showTestResults(); return; }
+    const q = testState.questions[testState.currentIdx];
+    const done = testState.correct + testState.wrong;
+    const pct = Math.round((done / testState.totalQuestions) * 100);
+    document.getElementById("test-bar-fill").style.width = pct + "%";
+    document.getElementById("test-progress-label").textContent = "— Question " + (done + 1) + " of " + testState.totalQuestions;
+    if (q.type === "mc") showTestMC(q);
+    else if (q.type === "match") showTestMatch(q);
+    else if (q.type === "write") showTestWrite(q);
+}
+
+function showTestMC(q) {
+    document.getElementById("test-q-mc").classList.remove("hidden");
+    document.getElementById("test-mc-question").textContent = q.card.q;
+    const allCards = decks[currentDeckName];
+    const others = allCards.filter(c => c.a !== q.card.a).sort(() => Math.random() - 0.5);
+    const wrongOpts = others.slice(0, 3).map(c => c.a);
+    const options = [q.card.a, ...wrongOpts].sort(() => Math.random() - 0.5);
+    const container = document.getElementById("test-mc-options");
+    container.innerHTML = "";
+    options.forEach(opt => {
+        const btn = document.createElement("button");
+        btn.className = "mc-option";
+        btn.textContent = opt;
+        btn.onclick = () => {
+            const btns = container.querySelectorAll(".mc-option");
+            btns.forEach(b => {
+                b.disabled = true;
+                if (b.textContent === q.card.a) b.classList.add("mc-correct");
+            });
+            const isCorrect = opt === q.card.a;
+            if (!isCorrect) btn.classList.add("mc-wrong");
+            if (isCorrect) { testState.correct++; testState.mcCorrect++; }
+            else { testState.wrong++; testState.mcWrong++; }
+            setTimeout(() => showTestFeedback(isCorrect, q.card.a), 600);
+        };
+        container.appendChild(btn);
+    });
+}
+
+function showTestMatch(q) {
+    document.getElementById("test-q-match").classList.remove("hidden");
+    document.getElementById("test-progress-label").textContent = "— Matching (" + q.cards.length + " pairs)";
+    testState.matchPairs = {};
+    const termsContainer = document.getElementById("test-match-terms");
+    const defsContainer = document.getElementById("test-match-defs");
+    termsContainer.innerHTML = "";
+    defsContainer.innerHTML = "";
+    const shuffledTerms = [...q.cards].sort(() => Math.random() - 0.5);
+    const shuffledDefs = [...q.cards].sort(() => Math.random() - 0.5);
+    shuffledTerms.forEach((card, i) => {
+        const el = document.createElement("div");
+        el.className = "test-match-term";
+        el.textContent = card.q;
+        el.draggable = true;
+        el.dataset.term = card.q;
+        el.ondragstart = (e) => {
+            e.dataTransfer.setData("text/plain", card.q);
+            el.classList.add("dragging");
+        };
+        el.ondragend = () => el.classList.remove("dragging");
+        termsContainer.appendChild(el);
+    });
+    shuffledDefs.forEach((card, i) => {
+        const el = document.createElement("div");
+        el.className = "test-match-def";
+        el.dataset.answer = card.q; // the correct term for this def
+        el.dataset.defIdx = i;
+        el.innerHTML = '<span class="def-text">' + escapeHtml(card.a) + '</span>';
+        el.ondragover = (e) => { e.preventDefault(); el.classList.add("drag-over"); };
+        el.ondragleave = () => el.classList.remove("drag-over");
+        el.ondrop = (e) => {
+            e.preventDefault(); el.classList.remove("drag-over");
+            const termText = e.dataTransfer.getData("text/plain");
+            // Remove this term from any previous placement
+            for (const key in testState.matchPairs) {
+                if (testState.matchPairs[key] === termText) delete testState.matchPairs[key];
+            }
+            testState.matchPairs[i] = termText;
+            renderMatchState(q);
+        };
+        defsContainer.appendChild(el);
+    });
+    document.getElementById("test-submit-match").disabled = false;
+}
+
+function renderMatchState(q) {
+    const termsContainer = document.getElementById("test-match-terms");
+    const defsContainer = document.getElementById("test-match-defs");
+    const placedTerms = new Set(Object.values(testState.matchPairs));
+    // Update term appearance
+    termsContainer.querySelectorAll(".test-match-term").forEach(el => {
+        el.classList.toggle("placed", placedTerms.has(el.dataset.term));
+    });
+    // Update def slots
+    defsContainer.querySelectorAll(".test-match-def").forEach(el => {
+        const idx = parseInt(el.dataset.defIdx);
+        const card = q.cards.find(c => c.a === el.querySelector(".def-text").textContent);
+        const defText = el.querySelector(".def-text").textContent;
+        const matchedTerm = testState.matchPairs[idx];
+        // Rebuild content
+        let html = '';
+        if (matchedTerm) {
+            html += '<span class="matched-term" onclick="removeMatch(' + idx + ')" title="Click to remove">' + escapeHtml(matchedTerm) + ' &#10005;</span>';
+        }
+        html += '<span class="def-text">' + escapeHtml(defText) + '</span>';
+        el.innerHTML = html;
+    });
+}
+
+function removeMatch(defIdx) {
+    delete testState.matchPairs[defIdx];
+    const q = testState.questions[testState.currentIdx];
+    renderMatchState(q);
+}
+
+function submitMatching() {
+    const q = testState.questions[testState.currentIdx];
+    const defsContainer = document.getElementById("test-match-defs");
+    const defs = defsContainer.querySelectorAll(".test-match-def");
+    let correct = 0;
+    defs.forEach(el => {
+        const idx = parseInt(el.dataset.defIdx);
+        const correctTerm = el.dataset.answer;
+        const userTerm = testState.matchPairs[idx] || "";
+        if (userTerm === correctTerm) {
+            el.classList.add("correct-match");
+            correct++;
+        } else {
+            el.classList.add("wrong-match");
+            // Show the correct answer
+            const correctLabel = document.createElement("span");
+            correctLabel.style.cssText = "display:block;font-size:0.75rem;color:var(--correct);margin-top:4px";
+            correctLabel.textContent = "Correct: " + correctTerm;
+            el.appendChild(correctLabel);
+        }
+    });
+    const wrong = q.cards.length - correct;
+    testState.correct += correct;
+    testState.wrong += wrong;
+    testState.matchCorrect += correct;
+    testState.matchWrong += wrong;
+    document.getElementById("test-submit-match").disabled = true;
+    // Disable drag
+    document.querySelectorAll(".test-match-term").forEach(el => el.draggable = false);
+    // Auto advance after a pause
+    setTimeout(() => {
+        testState.currentIdx++;
+        showTestQuestion();
+    }, 2000);
+}
+
+function showTestWrite(q) {
+    document.getElementById("test-q-write").classList.remove("hidden");
+    document.getElementById("test-write-question").textContent = q.card.q;
+    document.getElementById("test-write-input").value = "";
+    setTimeout(() => document.getElementById("test-write-input").focus(), 100);
+}
+
+function submitWritingAnswer() {
+    const input = document.getElementById("test-write-input").value.trim();
+    if (!input) return;
+    const q = testState.questions[testState.currentIdx];
+    const correct = q.card.a;
+    const info = getTypeableInfo(correct);
+    const normalize = s => s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+    const isCorrect = normalize(input) === normalize(correct) || normalize(input) === normalize(info.simplified);
+    if (isCorrect) { testState.correct++; testState.writeCorrect++; }
+    else { testState.wrong++; testState.writeWrong++; }
+    showTestFeedback(isCorrect, correct);
+}
+
+function showTestFeedback(isCorrect, correctAnswer) {
+    document.getElementById("test-q-mc").classList.add("hidden");
+    document.getElementById("test-q-write").classList.add("hidden");
+    document.getElementById("test-feedback").classList.remove("hidden");
+    const resultEl = document.getElementById("test-feedback-result");
+    resultEl.textContent = isCorrect ? "Correct!" : "Wrong";
+    resultEl.className = "feedback-result " + (isCorrect ? "feedback-correct" : "feedback-wrong");
+    document.getElementById("test-feedback-label").style.display = isCorrect ? "none" : "block";
+    document.getElementById("test-feedback-answer").style.display = isCorrect ? "none" : "block";
+    document.getElementById("test-feedback-answer").textContent = correctAnswer;
+}
+
+function nextTestQuestion() {
+    testState.currentIdx++;
+    showTestQuestion();
+}
+
+function showTestResults() {
+    document.getElementById("test-active").classList.add("hidden");
+    document.getElementById("test-results").classList.remove("hidden");
+    const total = testState.correct + testState.wrong;
+    const accuracy = total > 0 ? Math.round((testState.correct / total) * 100) : 0;
+    document.getElementById("test-res-correct").textContent = testState.correct;
+    document.getElementById("test-res-wrong").textContent = testState.wrong;
+    document.getElementById("test-res-accuracy").textContent = accuracy + "%";
+    // Breakdown
+    const bd = document.getElementById("test-results-breakdown");
+    let html = "";
+    if (testConfig.mc > 0) html += '<div class="test-breakdown-row"><span>Multiple Choice</span><span class="score-right">' + testState.mcCorrect + '</span> / ' + testConfig.mc + '</div>';
+    if (testConfig.match > 0) html += '<div class="test-breakdown-row"><span>Matching</span><span class="score-right">' + testState.matchCorrect + '</span> / ' + testConfig.match + '</div>';
+    if (testConfig.write > 0) html += '<div class="test-breakdown-row"><span>Writing</span><span class="score-right">' + testState.writeCorrect + '</span> / ' + testConfig.write + '</div>';
+    bd.innerHTML = html;
+}
+
 // ========== UI HELPERS ==========
 function openModal(id) { document.getElementById(id).classList.add("active"); const input = document.getElementById(id).querySelector("input, textarea"); if (input) setTimeout(() => input.focus(), 100); }
 function closeModal(id) { document.getElementById(id).classList.remove("active"); }
@@ -938,7 +1256,7 @@ document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     if (document.querySelector(".modal-overlay.active")) return;
 
-    if (learnActive) return;
+    if (learnActive || testActive) return;
 
     if (document.getElementById("study-view").classList.contains("hidden")) return;
 
