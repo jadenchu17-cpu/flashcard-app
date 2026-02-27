@@ -76,16 +76,16 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    margin: 15px auto 5px;
+    width: 36px;
+    height: 36px;
     background: transparent;
     border: 2px solid var(--accent);
     border-radius: 50%;
-    font-size: 1.3rem;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s;
     color: var(--text);
+    flex-shrink: 0;
 }
 .home-btn:hover {
     background: var(--accent);
@@ -95,9 +95,12 @@ body {
 .sidebar-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 10px 18px 15px;
+    gap: 10px;
+    padding: 15px 18px;
     border-bottom: 1px solid var(--border);
+}
+.sidebar-header .sidebar-close {
+    margin-left: auto;
 }
 
 .sidebar-title {

@@ -570,8 +570,17 @@ function renderStats() {
 
 function resetDeckStats() {
     if (!currentDeckName) return;
+    // Reset the per-deck stats (studied count & accuracy) back to 0
     deckStats[currentDeckName] = { studied: 0, correct: 0 };
     saveDeckStats();
+    // Clear the "already marked" tracker so Correct/Wrong buttons work again on all cards
+    markedCards = new Set();
+    // Reset the session right/wrong counters and go back to card 1
+    rightCount = 0; wrongCount = 0;
+    document.getElementById("right-count").textContent = 0;
+    document.getElementById("wrong-count").textContent = 0;
+    currentIndex = 0;
+    updateCard();
     renderStats();
 }
 
