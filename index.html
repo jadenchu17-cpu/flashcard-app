@@ -7,133 +7,170 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="header">
-        <h1>Flashcard Study App</h1>
-        <div class="header-actions">
-            <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">Light Mode</button>
-        </div>
-    </div>
-
-    <div class="stats-bar">
-        <div class="stat">
-            <span class="stat-value" id="streak">0</span>
-            <span class="stat-label">Day Streak</span>
-        </div>
-        <div class="stat">
-            <span class="stat-value" id="today-studied">0</span>
-            <span class="stat-label">Studied Today</span>
-        </div>
-        <div class="stat">
-            <span class="stat-value" id="accuracy">0%</span>
-            <span class="stat-label">Accuracy</span>
-        </div>
-        <div class="stat">
-            <span class="stat-value" id="best-streak">0</span>
-            <span class="stat-label">Best Streak</span>
-        </div>
-    </div>
-
-    <div class="folder-bar" id="folder-bar"></div>
-
-    <div class="deck-selector" id="deck-selector"></div>
-
-    <div class="progress hidden" id="progress-bar">
-        Card <span id="current-card">1</span> of <span id="total-cards">0</span>
-        <span id="review-label" class="review-label">— Reviewing Wrong Answers</span>
-    </div>
-
-    <div class="card-container" id="card-container">
-        <div class="card" id="flashcard" onclick="flipCard()">
-            <div class="card-front">
-                <p id="question">Select or create a deck to start!</p>
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2 class="sidebar-title">Decks</h2>
+                <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">&#10005;</button>
             </div>
-            <div class="card-back">
-                <p id="answer">Answer will appear here</p>
-            </div>
-        </div>
-    </div>
+            <div class="sidebar-folders" id="sidebar-folders"></div>
+            <div class="sidebar-decks" id="sidebar-decks"></div>
+            <button class="sidebar-new-deck" onclick="openModal('create-deck-modal')">+ New Deck</button>
+        </aside>
 
-    <p class="flip-hint" id="flip-hint">Click card or press Space to flip</p>
-
-    <!-- Learn Mode Panel -->
-    <div id="learn-mode" class="learn-mode hidden">
-        <div class="learn-header">
-            <span class="learn-title">Learn Mode <span id="learn-round-info"></span></span>
-            <button class="learn-exit-btn" onclick="exitLearnMode()">Exit</button>
-        </div>
-        <div class="learn-progress-section">
-            <div class="learn-stats">
-                <span>Left: <strong id="learn-remaining">0</strong></span>
-                <span class="score-right">Correct: <strong id="learn-correct">0</strong></span>
-                <span class="score-wrong">Wrong: <strong id="learn-wrong">0</strong></span>
-            </div>
-            <div class="learn-progress-bar">
-                <div class="learn-bar-fill" id="learn-bar-fill"></div>
-            </div>
-        </div>
-        <div class="learn-question-card" id="learn-question-card">
-            <p id="learn-question"></p>
-        </div>
-        <div id="learn-mc" class="learn-mc hidden">
-            <div id="mc-options" class="mc-options"></div>
-        </div>
-        <div id="learn-type" class="learn-type hidden">
-            <div class="type-letter-hint" id="type-letter-hint"></div>
-            <div class="type-accept-note hidden" id="type-accept-note"></div>
-            <div class="type-input-row">
-                <input type="text" id="type-input" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')submitTypedAnswer()" />
-            </div>
-            <div class="type-actions">
-                <button class="hint-btn" onclick="getHint()">Hint</button>
-                <button class="modal-confirm" onclick="submitTypedAnswer()">Submit</button>
-            </div>
-        </div>
-        <div id="learn-feedback" class="learn-feedback hidden">
-            <div id="feedback-result" class="feedback-result"></div>
-            <p class="feedback-correct-label" id="feedback-correct-label">Correct answer:</p>
-            <p id="feedback-answer" class="feedback-answer"></p>
-            <button class="modal-confirm learn-continue-btn" onclick="nextLearnCard()">Continue</button>
-        </div>
-        <div id="learn-results" class="learn-results hidden">
-            <h2>Round Complete!</h2>
-            <div class="results-stats">
-                <div class="result-stat">
-                    <span class="result-value score-right" id="result-correct">0</span>
-                    <span class="result-label">Correct</span>
-                </div>
-                <div class="result-stat">
-                    <span class="result-value score-wrong" id="result-wrong">0</span>
-                    <span class="result-label">Wrong</span>
-                </div>
-                <div class="result-stat">
-                    <span class="result-value" id="result-accuracy">0%</span>
-                    <span class="result-label">Accuracy</span>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <div class="header-left">
+                    <button class="menu-btn" id="menu-btn" onclick="toggleSidebar()">&#9776;</button>
+                    <h1>Flashcard Study App</h1>
+                    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">&#128161;</button>
                 </div>
             </div>
-            <div class="results-actions">
-                <button class="modal-cancel" onclick="exitLearnMode()">Done</button>
-                <button class="modal-confirm" id="retry-wrong-btn" onclick="retryWrongCards()">Retry Wrong (<span id="retry-count">0</span>)</button>
+
+            <div class="stats-bar">
+                <div class="stat">
+                    <span class="stat-value" id="streak">0</span>
+                    <span class="stat-label">Day Streak</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="today-studied">0</span>
+                    <span class="stat-label">Studied Today</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="accuracy">0%</span>
+                    <span class="stat-label">Accuracy</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value" id="best-streak">0</span>
+                    <span class="stat-label">Best Streak</span>
+                </div>
+            </div>
+
+            <!-- Home View -->
+            <div id="home-view">
+                <div class="home-welcome">
+                    <h2>Your Decks</h2>
+                    <p>Select a deck to start studying</p>
+                </div>
+                <div class="home-deck-grid" id="home-deck-grid"></div>
+            </div>
+
+            <!-- Study View (hidden by default) -->
+            <div id="study-view" class="hidden">
+                <div class="study-header">
+                    <button class="back-home-btn" onclick="showHomeView()">&#8592; Back</button>
+                    <span class="study-deck-name" id="study-deck-name"></span>
+                </div>
+
+                <div class="progress" id="progress-bar">
+                    Card <span id="current-card">1</span> of <span id="total-cards">0</span>
+                    <span id="review-label" class="review-label">— Reviewing Wrong Answers</span>
+                </div>
+
+                <div class="card-container" id="card-container">
+                    <div class="card" id="flashcard" onclick="flipCard()">
+                        <div class="card-front">
+                            <p id="question">Select or create a deck to start!</p>
+                        </div>
+                        <div class="card-back">
+                            <p id="answer">Answer will appear here</p>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="flip-hint" id="flip-hint">Click card or press Space to flip</p>
+
+                <!-- Learn Mode Panel -->
+                <div id="learn-mode" class="learn-mode hidden">
+                    <div class="learn-header">
+                        <span class="learn-title">Learn Mode <span id="learn-round-info"></span></span>
+                        <button class="learn-exit-btn" onclick="exitLearnMode()">Exit</button>
+                    </div>
+                    <div class="learn-progress-section">
+                        <div class="learn-stats">
+                            <span>Left: <strong id="learn-remaining">0</strong></span>
+                            <span class="score-right">Correct: <strong id="learn-correct">0</strong></span>
+                            <span class="score-wrong">Wrong: <strong id="learn-wrong">0</strong></span>
+                        </div>
+                        <div class="learn-progress-bar">
+                            <div class="learn-bar-fill" id="learn-bar-fill"></div>
+                        </div>
+                    </div>
+                    <div class="learn-question-card" id="learn-question-card">
+                        <p id="learn-question"></p>
+                    </div>
+                    <div id="learn-mc" class="learn-mc hidden">
+                        <div id="mc-options" class="mc-options"></div>
+                    </div>
+                    <div id="learn-type" class="learn-type hidden">
+                        <div class="type-letter-hint" id="type-letter-hint"></div>
+                        <div class="type-accept-note hidden" id="type-accept-note"></div>
+                        <div class="type-input-row">
+                            <input type="text" id="type-input" placeholder="Type your answer..." onkeydown="if(event.key==='Enter')submitTypedAnswer()" />
+                        </div>
+                        <div class="type-actions">
+                            <button class="hint-btn" onclick="getHint()">Hint</button>
+                            <button class="modal-confirm" onclick="submitTypedAnswer()">Submit</button>
+                        </div>
+                    </div>
+                    <div id="learn-feedback" class="learn-feedback hidden">
+                        <div id="feedback-result" class="feedback-result"></div>
+                        <p class="feedback-correct-label" id="feedback-correct-label">Correct answer:</p>
+                        <p id="feedback-answer" class="feedback-answer"></p>
+                        <button class="modal-confirm learn-continue-btn" onclick="nextLearnCard()">Continue</button>
+                    </div>
+                    <div id="learn-results" class="learn-results hidden">
+                        <h2>Round Complete!</h2>
+                        <div class="results-stats">
+                            <div class="result-stat">
+                                <span class="result-value score-right" id="result-correct">0</span>
+                                <span class="result-label">Correct</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value score-wrong" id="result-wrong">0</span>
+                                <span class="result-label">Wrong</span>
+                            </div>
+                            <div class="result-stat">
+                                <span class="result-value" id="result-accuracy">0%</span>
+                                <span class="result-label">Accuracy</span>
+                            </div>
+                        </div>
+                        <div class="results-actions">
+                            <button class="modal-cancel" onclick="exitLearnMode()">Done</button>
+                            <button class="modal-confirm" id="retry-wrong-btn" onclick="retryWrongCards()">Retry Wrong (<span id="retry-count">0</span>)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls" id="controls">
+                    <button class="nav-btn" onclick="prevCard()">Previous</button>
+                    <button class="wrong-btn" onclick="markWrong()">Wrong</button>
+                    <button class="right-btn" onclick="markRight()">Correct</button>
+                    <button class="nav-btn" onclick="nextCard()">Next</button>
+                </div>
+
+                <div class="score" id="score">
+                    <span class="score-right">Correct: <span id="right-count">0</span></span>
+                    <span class="score-wrong">Wrong: <span id="wrong-count">0</span></span>
+                </div>
+
+                <div class="action-buttons" id="action-buttons">
+                    <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
+                    <button class="learn-btn" onclick="startLearnMode()">Learn</button>
+                    <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
+                    <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
+                </div>
+
+                <div class="keyboard-hints">
+                    <span>Space: Flip</span>
+                    <span>Arrow Keys: Navigate</span>
+                    <span>C: Correct</span>
+                    <span>W: Wrong</span>
+                </div>
             </div>
         </div>
-    </div>
-
-    <div class="controls hidden" id="controls">
-        <button class="nav-btn" onclick="prevCard()">Previous</button>
-        <button class="wrong-btn" onclick="markWrong()">Wrong</button>
-        <button class="right-btn" onclick="markRight()">Correct</button>
-        <button class="nav-btn" onclick="nextCard()">Next</button>
-    </div>
-
-    <div class="score hidden" id="score">
-        <span class="score-right">Correct: <span id="right-count">0</span></span>
-        <span class="score-wrong">Wrong: <span id="wrong-count">0</span></span>
-    </div>
-
-    <div class="action-buttons hidden" id="action-buttons">
-        <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
-        <button class="learn-btn" onclick="startLearnMode()">Learn</button>
-        <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
-        <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
     </div>
 
     <!-- Create Deck Modal -->
@@ -186,13 +223,6 @@
                 <button class="modal-confirm" onclick="closeModal('manage-modal')">Done</button>
             </div>
         </div>
-    </div>
-
-    <div class="keyboard-hints">
-        <span>Space: Flip</span>
-        <span>Arrow Keys: Navigate</span>
-        <span>C: Correct</span>
-        <span>W: Wrong</span>
     </div>
 
     <script src="script.js"></script>

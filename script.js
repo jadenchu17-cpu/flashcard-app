@@ -65,6 +65,7 @@ let deckFolders = {};
 let currentFolder = "All";
 let learnActive = false;
 let learnState = {};
+let sidebarOpen = false;
 
 // ========== LOCAL STORAGE ==========
 function saveDecks() { localStorage.setItem("fc-decks", JSON.stringify(decks)); }
@@ -99,20 +100,36 @@ function toggleTheme() {
     const html = document.documentElement;
     const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
     html.setAttribute("data-theme", next);
-    document.getElementById("theme-toggle").textContent = next === "dark" ? "Light Mode" : "Dark Mode";
+    document.getElementById("theme-toggle").textContent = next === "dark" ? "\u{1F4A1}" : "\u{2600}\u{FE0F}";
     saveTheme(next);
 }
 function applyTheme() {
     const theme = loadTheme();
     document.documentElement.setAttribute("data-theme", theme);
-    document.getElementById("theme-toggle").textContent = theme === "dark" ? "Light Mode" : "Dark Mode";
+    document.getElementById("theme-toggle").textContent = theme === "dark" ? "\u{1F4A1}" : "\u{2600}\u{FE0F}";
+}
+
+// ========== SIDEBAR ==========
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    sidebarOpen = !sidebarOpen;
+    sidebar.classList.toggle("open", sidebarOpen);
+    if (overlay) overlay.classList.toggle("active", sidebarOpen);
+}
+
+function closeSidebar() {
+    sidebarOpen = false;
+    document.getElementById("sidebar").classList.remove("open");
+    const overlay = document.getElementById("sidebar-overlay");
+    if (overlay) overlay.classList.remove("active");
 }
 
 // ========== FOLDERS ==========
 function getFolderNames() { return [...new Set(Object.values(deckFolders))].sort(); }
 
 function renderFolderBar() {
-    const container = document.getElementById("folder-bar");
+    const container = document.getElementById("sidebar-folders");
     const folderNames = getFolderNames();
     if (folderNames.length === 0) { container.innerHTML = ""; return; }
     container.innerHTML = "";
@@ -144,11 +161,8 @@ function renderFolderBar() {
 function switchFolder(name) {
     currentFolder = name;
     renderFolderBar();
-    renderDeckButtons();
-    const visibleDecks = getVisibleDeckNames();
-    if (currentDeckName && !visibleDecks.includes(currentDeckName) && visibleDecks.length > 0) {
-        switchDeck(visibleDecks[0]);
-    }
+    renderSidebar();
+    renderHomeGrid();
 }
 
 function getVisibleDeckNames() {
@@ -175,34 +189,71 @@ function assignDeckFolder() {
     const folder = document.getElementById("deck-folder-select").value;
     if (folder) deckFolders[currentDeckName] = folder;
     else delete deckFolders[currentDeckName];
-    saveFolders(); renderFolderBar(); renderDeckButtons();
+    saveFolders(); renderFolderBar(); renderSidebar(); renderHomeGrid();
 }
 
 function createFolderFromManage() {
     const name = prompt("New folder name:");
     if (!name || !name.trim()) return;
     deckFolders[currentDeckName] = name.trim();
-    saveFolders(); populateFolderSelect(); renderFolderBar(); renderDeckButtons();
+    saveFolders(); populateFolderSelect(); renderFolderBar(); renderSidebar(); renderHomeGrid();
+}
+
+// ========== SIDEBAR DECK LIST ==========
+function renderSidebar() {
+    const container = document.getElementById("sidebar-decks");
+    container.innerHTML = "";
+    getVisibleDeckNames().forEach((name) => {
+        const item = document.createElement("div");
+        item.className = "deck-item" + (name === currentDeckName ? " active" : "");
+        item.innerHTML = '<span>' + escapeHtml(name) + '</span><span class="deck-item-count">' + decks[name].length + '</span>';
+        item.onclick = () => { switchDeck(name); closeSidebar(); };
+        container.appendChild(item);
+    });
+}
+
+// ========== HOME VIEW ==========
+function renderHomeGrid() {
+    const container = document.getElementById("home-deck-grid");
+    container.innerHTML = "";
+    getVisibleDeckNames().forEach((name) => {
+        const card = document.createElement("div");
+        card.className = "home-deck-card";
+        card.onclick = () => { switchDeck(name); closeSidebar(); };
+        const folder = deckFolders[name];
+        card.innerHTML =
+            '<span class="home-deck-card-name">' + escapeHtml(name) + '</span>' +
+            '<div class="home-deck-card-info">' +
+            '<span class="home-deck-card-count">' + decks[name].length + ' card' + (decks[name].length !== 1 ? 's' : '') + '</span>' +
+            (folder ? '<span class="home-deck-card-folder">' + escapeHtml(folder) + '</span>' : '') +
+            '</div>';
+        container.appendChild(card);
+    });
+
+    const newCard = document.createElement("div");
+    newCard.className = "home-new-deck-card";
+    newCard.textContent = "+ New Deck";
+    newCard.onclick = () => openModal("create-deck-modal");
+    container.appendChild(newCard);
+}
+
+function showHomeView() {
+    exitLearnMode();
+    currentDeckName = null;
+    currentCards = [];
+    document.getElementById("home-view").classList.remove("hidden");
+    document.getElementById("study-view").classList.add("hidden");
+    renderSidebar();
+    renderHomeGrid();
+}
+
+function showStudyView() {
+    document.getElementById("home-view").classList.add("hidden");
+    document.getElementById("study-view").classList.remove("hidden");
+    document.getElementById("study-deck-name").textContent = currentDeckName;
 }
 
 // ========== DECK MANAGEMENT ==========
-function renderDeckButtons() {
-    const container = document.getElementById("deck-selector");
-    container.innerHTML = "";
-    getVisibleDeckNames().forEach((name) => {
-        const btn = document.createElement("button");
-        btn.className = "deck-btn" + (name === currentDeckName ? " active" : "");
-        btn.textContent = name;
-        btn.onclick = () => switchDeck(name);
-        container.appendChild(btn);
-    });
-    const newBtn = document.createElement("button");
-    newBtn.className = "new-deck-btn";
-    newBtn.textContent = "+ New Deck";
-    newBtn.onclick = () => openModal("create-deck-modal");
-    container.appendChild(newBtn);
-}
-
 function switchDeck(name) {
     if (!decks[name]) return;
     exitLearnMode();
@@ -212,7 +263,7 @@ function switchDeck(name) {
     document.getElementById("wrong-count").textContent = 0;
     document.getElementById("review-label").style.display = "none";
     document.getElementById("review-btn").classList.remove("active");
-    updateReviewButton(); renderDeckButtons(); showStudyUI(true); updateCard();
+    updateReviewButton(); renderSidebar(); showStudyView(); updateCard();
 }
 
 function createDeck() {
@@ -230,11 +281,7 @@ function deleteDeck() {
     if (!confirm('Delete "' + currentDeckName + '" and all its cards?')) return;
     delete deckFolders[currentDeckName]; saveFolders();
     delete decks[currentDeckName]; saveDecks(); closeModal("manage-modal");
-    const remaining = Object.keys(decks);
-    if (remaining.length > 0) { switchDeck(remaining[0]); }
-    else { currentDeckName = null; currentCards = []; showStudyUI(false); renderDeckButtons(); renderFolderBar();
-        document.getElementById("question").textContent = "Create a deck to start!";
-        document.getElementById("answer").textContent = ""; }
+    showHomeView();
 }
 
 // ========== CARD MANAGEMENT ==========
@@ -262,7 +309,7 @@ function saveCard() {
     if (!q || !a) return;
     if (editIndex >= 0) decks[currentDeckName][editIndex] = { q, a };
     else decks[currentDeckName].push({ q, a });
-    saveDecks(); cancelEdit(); renderCardList();
+    saveDecks(); cancelEdit(); renderCardList(); renderSidebar(); renderHomeGrid();
     if (!reviewMode) { currentCards = decks[currentDeckName];
         if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
         updateCard(); }
@@ -287,7 +334,7 @@ function cancelEdit() {
 }
 
 function deleteCard(index) {
-    decks[currentDeckName].splice(index, 1); saveDecks(); renderCardList();
+    decks[currentDeckName].splice(index, 1); saveDecks(); renderCardList(); renderSidebar(); renderHomeGrid();
     if (!reviewMode) {
         if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
         if (currentCards.length > 0) updateCard();
@@ -396,7 +443,12 @@ function exitLearnMode() {
     document.getElementById("learn-mode").classList.add("hidden");
     document.getElementById("card-container").classList.remove("hidden");
     document.getElementById("flip-hint").classList.remove("hidden");
-    if (currentDeckName) { showStudyUI(true); updateCard(); }
+    if (currentDeckName) {
+        document.getElementById("controls").classList.remove("hidden");
+        document.getElementById("score").classList.remove("hidden");
+        document.getElementById("action-buttons").classList.remove("hidden");
+        document.getElementById("progress-bar").classList.remove("hidden");
+    }
 }
 
 function showNextLearnCard() {
@@ -407,9 +459,7 @@ function showNextLearnCard() {
     if (learnState.queue.length === 0) { showLearnResults(); return; }
 
     learnState.current = learnState.queue.shift();
-    // 60% MC, 40% type — but need at least 4 cards for MC
     const allCards = decks[currentDeckName];
-    // Only use type mode when the answer is a short term (3 words or fewer)
     const wordCount = learnState.current.a.trim().split(/\s+/).length;
     const canType = wordCount <= 3 && allCards.length >= 4;
     learnState.mode = (canType && Math.random() > 0.4) ? "type" : "mc";
@@ -458,7 +508,6 @@ function selectMC(clickedBtn, isCorrect, correctAnswer) {
     setTimeout(() => handleLearnAnswer(isCorrect), 800);
 }
 
-// Build a simplified "typeable" version of the answer + a note explaining what to type
 function getTypeableInfo(answer) {
     const replacements = [
         [/₂/g, "2"], [/₃/g, "3"], [/₄/g, "4"],
@@ -467,20 +516,16 @@ function getTypeableInfo(answer) {
         [/→/g, "->"], [/·/g, "*"], [/ΔH/g, "delta H"],
         [/\u00b2/g, "2"], [/\u00b3/g, "3"],
     ];
-    // Check for non-ASCII (Korean, math symbols, etc.)
     const hasNonAscii = /[^\x00-\x7F]/.test(answer);
-    // Check for content in parentheses that looks like a romanization e.g. "(annyeonghaseyo)"
     const romanMatch = answer.match(/\(([a-zA-Z\s?!.]+)\)/);
 
     let simplified = answer;
     let notes = [];
 
-    // If answer has Korean/CJK + romanization in parens, accept just the romanization
     if (romanMatch && hasNonAscii) {
         simplified = romanMatch[1].trim();
         notes.push('Type the romanization: "' + simplified + '"');
     } else {
-        // Apply symbol replacements
         for (const [pattern, replacement] of replacements) {
             if (pattern.test(simplified)) {
                 simplified = simplified.replace(pattern, replacement);
@@ -502,7 +547,6 @@ function showTypeMode() {
     learnState.revealed = new Array(answer.length).fill(false);
     learnState.typeableInfo = getTypeableInfo(answer);
 
-    // Show accept note if there are special characters
     const noteEl = document.getElementById("type-accept-note");
     if (learnState.typeableInfo.note) {
         noteEl.textContent = learnState.typeableInfo.note;
@@ -517,11 +561,9 @@ function showTypeMode() {
 }
 
 function updateLetterHint() {
-    // Use simplified version for blanks if answer has special chars (e.g. show romanization blanks not Korean)
     const info = learnState.typeableInfo;
     const display = (info && info.note) ? info.simplified : learnState.current.a;
 
-    // Rebuild revealed array if display length changed
     if (learnState.revealed.length !== display.length) {
         learnState.revealed = new Array(display.length).fill(false);
     }
@@ -555,7 +597,6 @@ function submitTypedAnswer() {
     const simplified = learnState.typeableInfo ? learnState.typeableInfo.simplified : correct;
     const normalize = (s) => s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
     const normalInput = normalize(input);
-    // Accept either the original answer or the simplified version
     const isCorrect = normalInput === normalize(correct) || normalInput === normalize(simplified);
     handleLearnAnswer(isCorrect);
 }
@@ -642,7 +683,7 @@ function importCards() {
     document.getElementById("import-text").value = "";
     document.getElementById("import-preview").textContent = "0 cards detected";
     document.getElementById("import-area").classList.add("hidden");
-    renderCardList();
+    renderCardList(); renderSidebar(); renderHomeGrid();
     if (!reviewMode) { currentCards = decks[currentDeckName]; updateCard(); }
     alert("Imported " + cards.length + " cards!");
 }
@@ -704,11 +745,6 @@ async function aiDefine() {
 }
 
 // ========== UI HELPERS ==========
-function showStudyUI(show) {
-    ["progress-bar", "controls", "score", "action-buttons"].forEach((id) => {
-        document.getElementById(id).classList.toggle("hidden", !show);
-    });
-}
 function openModal(id) { document.getElementById(id).classList.add("active"); const input = document.getElementById(id).querySelector("input, textarea"); if (input) setTimeout(() => input.focus(), 100); }
 function closeModal(id) { document.getElementById(id).classList.remove("active"); }
 function closeModalOnOverlay(e, id) { if (e.target === e.currentTarget) closeModal(id); }
@@ -718,7 +754,10 @@ document.addEventListener("keydown", (e) => {
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     if (document.querySelector(".modal-overlay.active")) return;
 
-    if (learnActive) return; // learn mode handles its own input
+    if (learnActive) return;
+
+    // Only handle shortcuts when in study view
+    if (document.getElementById("study-view").classList.contains("hidden")) return;
 
     switch (e.key) {
         case " ": e.preventDefault(); flipCard(); break;
@@ -732,9 +771,16 @@ document.addEventListener("keydown", (e) => {
 // ========== INIT ==========
 function init() {
     applyTheme(); loadDecks(); loadFolders(); loadStats(); renderStats();
-    renderFolderBar(); renderDeckButtons();
-    const deckNames = Object.keys(decks);
-    if (deckNames.length > 0) switchDeck(deckNames[0]);
-    else showStudyUI(false);
+    renderFolderBar(); renderSidebar(); renderHomeGrid();
+
+    // Add sidebar overlay for mobile
+    const overlay = document.createElement("div");
+    overlay.className = "sidebar-overlay";
+    overlay.id = "sidebar-overlay";
+    overlay.onclick = closeSidebar;
+    document.body.appendChild(overlay);
+
+    // Start on home view
+    showHomeView();
 }
 init();
