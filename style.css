@@ -122,91 +122,88 @@ body {
 }
 .sidebar-close:hover { color: var(--text); background: var(--sidebar-hover); }
 
-/* ========== FOLDER BAR (sidebar) ========== */
-.sidebar-folders {
-    display: flex;
-    gap: 6px;
-    padding: 12px 14px 8px;
-    flex-wrap: wrap;
-}
-
-.folder-btn {
-    padding: 5px 12px;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.3s;
-    position: relative;
-}
-.folder-btn:hover, .folder-btn.active {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: rgba(233, 69, 96, 0.1);
-}
-.folder-btn.drag-over {
-    border-color: var(--correct);
-    background: rgba(39, 174, 96, 0.2);
-    color: var(--correct);
-    transform: scale(1.05);
-}
-.folder-btn .folder-color-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin-right: 4px;
-    vertical-align: middle;
-}
-
-.folder-new-btn {
-    padding: 5px 12px;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px dashed var(--text-muted);
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.3s;
-}
-.folder-new-btn:hover { color: var(--accent); border-color: var(--accent); }
-
-.folder-no-folder {
-    padding: 5px 12px;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px dashed var(--border);
-    border-radius: 12px;
-    cursor: default;
-    font-size: 0.75rem;
-    transition: all 0.3s;
-}
-.folder-no-folder.drag-over {
-    border-color: var(--wrong);
-    background: rgba(192, 57, 43, 0.15);
-    color: var(--wrong);
-}
-
-/* ========== SIDEBAR DECK LIST ========== */
-.sidebar-decks {
+/* ========== SIDEBAR CONTENT ========== */
+.sidebar-content {
     flex: 1;
     padding: 8px 10px;
     overflow-y: auto;
 }
 
-.deck-item {
+/* ========== FOLDER ITEM (collapsible) ========== */
+.folder-item {
+    margin-bottom: 2px;
+}
+.folder-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 14px;
-    margin-bottom: 4px;
+    gap: 8px;
+    padding: 10px 14px;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
     color: var(--text);
     font-size: 0.9rem;
+    font-weight: 600;
+}
+.folder-header:hover {
+    background: var(--sidebar-hover);
+}
+.folder-header.drag-over {
+    background: rgba(39, 174, 96, 0.15);
+    outline: 2px dashed var(--correct);
+    outline-offset: -2px;
+}
+.folder-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.folder-header-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.folder-header-count {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+.folder-arrow {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+.folder-item.expanded .folder-arrow {
+    transform: rotate(90deg);
+}
+.folder-decks {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+.folder-item.expanded .folder-decks {
+    max-height: 500px;
+}
+
+/* ========== DECK ITEM ========== */
+.deck-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    margin-bottom: 2px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text);
+    font-size: 0.85rem;
+}
+.deck-item.nested {
+    padding-left: 32px;
+    font-size: 0.83rem;
 }
 .deck-item:hover {
     background: var(--sidebar-hover);
@@ -220,27 +217,42 @@ body {
     opacity: 0.4;
 }
 .deck-item-count {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
     background: var(--surface-2);
     padding: 2px 8px;
     border-radius: 10px;
 }
 
-.sidebar-new-deck {
-    margin: 10px 14px 18px;
-    padding: 12px;
+/* ========== SIDEBAR ACTIONS (bottom buttons) ========== */
+.sidebar-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 14px 18px;
+    border-top: 1px solid var(--border);
+}
+.sidebar-create-btn {
+    flex: 1;
+    padding: 10px;
     background: transparent;
     color: var(--accent);
     border: 2px dashed var(--accent);
     border-radius: 10px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     transition: all 0.3s;
 }
-.sidebar-new-deck:hover {
+.sidebar-create-btn:hover {
     background: rgba(233, 69, 96, 0.1);
+}
+.folder-create-btn {
+    color: var(--text-muted);
+    border-color: var(--text-muted);
+}
+.folder-create-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
 }
 
 /* ========== MAIN CONTENT ========== */

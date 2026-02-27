@@ -15,9 +15,11 @@
                 <h2 class="sidebar-title">Decks</h2>
                 <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">&#10005;</button>
             </div>
-            <div class="sidebar-folders" id="sidebar-folders"></div>
-            <div class="sidebar-decks" id="sidebar-decks"></div>
-            <button class="sidebar-new-deck" onclick="openModal('create-deck-modal')">+ New Deck</button>
+            <div class="sidebar-content" id="sidebar-content"></div>
+            <div class="sidebar-actions">
+                <button class="sidebar-create-btn" onclick="openModal('create-deck-modal')">+ Deck</button>
+                <button class="sidebar-create-btn folder-create-btn" onclick="createNewFolder()">+ Folder</button>
+            </div>
         </aside>
 
         <!-- Main Content -->

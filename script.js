@@ -66,7 +66,7 @@ let stats = { streak: 0, bestStreak: 0, lastStudyDate: null };
 let deckFolders = {};       // { "Korean": "Languages", ... }
 let folderColors = {};      // { "Languages": "#6c5ce7", ... }
 let deckStats = {};         // { "APUSH": { studied: 5, correct: 3 }, ... }
-let currentFolder = "All";
+let expandedFolders = new Set();
 let learnActive = false;
 let learnState = {};
 let sidebarOpen = false;
@@ -143,74 +143,16 @@ function closeSidebar() {
 function getFolderNames() { return [...new Set(Object.values(deckFolders))].sort(); }
 function getFolderColor(name) { return folderColors[name] || "#e94560"; }
 
-function renderFolderBar() {
-    const container = document.getElementById("sidebar-folders");
-    const folderNames = getFolderNames();
-    container.innerHTML = "";
-
-    if (folderNames.length === 0) return;
-
-    const allBtn = document.createElement("button");
-    allBtn.className = "folder-btn" + (currentFolder === "All" ? " active" : "");
-    allBtn.textContent = "All";
-    allBtn.onclick = () => switchFolder("All");
-    // Drop zone: remove folder
-    allBtn.ondragover = (e) => { e.preventDefault(); };
-    container.appendChild(allBtn);
-
-    folderNames.forEach((name) => {
-        const btn = document.createElement("button");
-        btn.className = "folder-btn" + (currentFolder === name ? " active" : "");
-        const color = getFolderColor(name);
-        btn.innerHTML = '<span class="folder-color-dot" style="background:' + color + '"></span>' + escapeHtml(name);
-        btn.onclick = () => switchFolder(name);
-        btn.oncontextmenu = (e) => { e.preventDefault(); openFolderEdit(name); };
-        // Drop zone
-        btn.ondragover = (e) => { e.preventDefault(); btn.classList.add("drag-over"); };
-        btn.ondragleave = () => { btn.classList.remove("drag-over"); };
-        btn.ondrop = (e) => {
-            e.preventDefault(); btn.classList.remove("drag-over");
-            if (draggedDeckName) { deckFolders[draggedDeckName] = name; saveFolders(); renderAll(); }
-        };
-        container.appendChild(btn);
-    });
-
-    // "No Folder" drop zone
-    const noBtn = document.createElement("span");
-    noBtn.className = "folder-no-folder";
-    noBtn.textContent = "No Folder";
-    noBtn.ondragover = (e) => { e.preventDefault(); noBtn.classList.add("drag-over"); };
-    noBtn.ondragleave = () => { noBtn.classList.remove("drag-over"); };
-    noBtn.ondrop = (e) => {
-        e.preventDefault(); noBtn.classList.remove("drag-over");
-        if (draggedDeckName) { delete deckFolders[draggedDeckName]; saveFolders(); renderAll(); }
-    };
-    container.appendChild(noBtn);
-
-    const newBtn = document.createElement("button");
-    newBtn.className = "folder-new-btn";
-    newBtn.textContent = "+ Folder";
-    newBtn.onclick = () => {
-        const name = prompt("Folder name:");
-        if (name && name.trim()) {
-            if (!folderColors[name.trim()]) folderColors[name.trim()] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
-            saveFolderColors();
-            switchFolder(name.trim());
-        }
-    };
-    container.appendChild(newBtn);
-}
-
-function switchFolder(name) {
-    currentFolder = name;
-    renderAll();
-}
-
 function getVisibleDeckNames() {
-    return Object.keys(decks).filter((name) => {
-        if (currentFolder === "All") return true;
-        return (deckFolders[name] || "") === currentFolder;
-    });
+    return Object.keys(decks);
+}
+
+function getUnfiledDeckNames() {
+    return Object.keys(decks).filter((name) => !deckFolders[name]);
+}
+
+function getDecksInFolder(folderName) {
+    return Object.keys(decks).filter((name) => deckFolders[name] === folderName);
 }
 
 function populateFolderSelect() {
@@ -239,6 +181,26 @@ function createFolderFromManage() {
     deckFolders[currentDeckName] = name.trim();
     if (!folderColors[name.trim()]) folderColors[name.trim()] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
     saveFolders(); saveFolderColors(); populateFolderSelect(); renderAll();
+}
+
+function createNewFolder() {
+    const name = prompt("Folder name:");
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (!folderColors[trimmed]) folderColors[trimmed] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
+    // Create an empty entry so folder shows up even without decks
+    if (!getFolderNames().includes(trimmed)) {
+        // We need at least one reference for the folder to exist. Store color is enough.
+    }
+    saveFolderColors();
+    expandedFolders.add(trimmed);
+    renderAll();
+}
+
+function toggleFolderExpand(name) {
+    if (expandedFolders.has(name)) expandedFolders.delete(name);
+    else expandedFolders.add(name);
+    renderSidebar();
 }
 
 // ========== FOLDER EDIT (rename, color, delete) ==========
@@ -270,13 +232,15 @@ function saveFolderEdit() {
     const selectedSwatch = document.querySelector("#color-options .color-swatch.selected");
     const newColor = selectedSwatch ? selectedSwatch.style.background : getFolderColor(editingFolder);
 
-    // Rename: update all decks that reference the old folder
     if (newName !== editingFolder) {
         for (const deckName in deckFolders) {
             if (deckFolders[deckName] === editingFolder) deckFolders[deckName] = newName;
         }
         delete folderColors[editingFolder];
-        if (currentFolder === editingFolder) currentFolder = newName;
+        if (expandedFolders.has(editingFolder)) {
+            expandedFolders.delete(editingFolder);
+            expandedFolders.add(newName);
+        }
     }
     folderColors[newName] = newColor;
     saveFolders(); saveFolderColors();
@@ -291,30 +255,81 @@ function deleteFolder() {
         if (deckFolders[deckName] === editingFolder) delete deckFolders[deckName];
     }
     delete folderColors[editingFolder];
-    if (currentFolder === editingFolder) currentFolder = "All";
+    expandedFolders.delete(editingFolder);
     saveFolders(); saveFolderColors();
     closeModal("folder-edit-modal");
     renderAll();
 }
 
-// ========== SIDEBAR DECK LIST (with drag) ==========
+// ========== SIDEBAR (unified: folders + decks) ==========
+function makeDeckItem(name, nested) {
+    const item = document.createElement("div");
+    item.className = "deck-item" + (name === currentDeckName ? " active" : "") + (nested ? " nested" : "");
+    item.draggable = true;
+    item.innerHTML = '<span>' + escapeHtml(name) + '</span><span class="deck-item-count">' + decks[name].length + '</span>';
+    item.onclick = () => { switchDeck(name); closeSidebar(); };
+    item.ondragstart = (e) => {
+        draggedDeckName = name;
+        item.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+    };
+    item.ondragend = () => { draggedDeckName = null; item.classList.remove("dragging"); };
+    return item;
+}
+
 function renderSidebar() {
-    const container = document.getElementById("sidebar-decks");
+    const container = document.getElementById("sidebar-content");
     container.innerHTML = "";
-    getVisibleDeckNames().forEach((name) => {
-        const item = document.createElement("div");
-        item.className = "deck-item" + (name === currentDeckName ? " active" : "");
-        item.draggable = true;
-        item.innerHTML = '<span>' + escapeHtml(name) + '</span><span class="deck-item-count">' + decks[name].length + '</span>';
-        item.onclick = () => { switchDeck(name); closeSidebar(); };
-        // Drag events
-        item.ondragstart = (e) => {
-            draggedDeckName = name;
-            item.classList.add("dragging");
-            e.dataTransfer.effectAllowed = "move";
+
+    // 1. Unfiled decks first
+    getUnfiledDeckNames().forEach((name) => {
+        container.appendChild(makeDeckItem(name, false));
+    });
+
+    // 2. All folders (including empty ones from folderColors)
+    const allFolderNames = [...new Set([...getFolderNames(), ...Object.keys(folderColors)])].sort();
+
+    allFolderNames.forEach((folderName) => {
+        const folderDecks = getDecksInFolder(folderName);
+        const isExpanded = expandedFolders.has(folderName);
+        const color = getFolderColor(folderName);
+
+        const folderDiv = document.createElement("div");
+        folderDiv.className = "folder-item" + (isExpanded ? " expanded" : "");
+
+        // Folder header
+        const header = document.createElement("div");
+        header.className = "folder-header";
+        header.innerHTML =
+            '<span class="folder-color-dot" style="background:' + color + '"></span>' +
+            '<span class="folder-header-name">' + escapeHtml(folderName) + '</span>' +
+            '<span class="folder-header-count">' + folderDecks.length + '</span>' +
+            '<span class="folder-arrow">&#9654;</span>';
+        header.onclick = () => toggleFolderExpand(folderName);
+        header.oncontextmenu = (e) => { e.preventDefault(); openFolderEdit(folderName); };
+        // Drop zone
+        header.ondragover = (e) => { e.preventDefault(); header.classList.add("drag-over"); };
+        header.ondragleave = () => { header.classList.remove("drag-over"); };
+        header.ondrop = (e) => {
+            e.preventDefault(); header.classList.remove("drag-over");
+            if (draggedDeckName) {
+                deckFolders[draggedDeckName] = folderName;
+                saveFolders();
+                expandedFolders.add(folderName);
+                renderAll();
+            }
         };
-        item.ondragend = () => { draggedDeckName = null; item.classList.remove("dragging"); };
-        container.appendChild(item);
+        folderDiv.appendChild(header);
+
+        // Folder deck list (collapsible)
+        const deckList = document.createElement("div");
+        deckList.className = "folder-decks";
+        folderDecks.forEach((deckName) => {
+            deckList.appendChild(makeDeckItem(deckName, true));
+        });
+        folderDiv.appendChild(deckList);
+
+        container.appendChild(folderDiv);
     });
 }
 
@@ -322,7 +337,7 @@ function renderSidebar() {
 function renderHomeGrid() {
     const container = document.getElementById("home-deck-grid");
     container.innerHTML = "";
-    getVisibleDeckNames().forEach((name) => {
+    Object.keys(decks).forEach((name) => {
         const card = document.createElement("div");
         card.className = "home-deck-card";
         card.onclick = () => { switchDeck(name); closeSidebar(); };
@@ -362,7 +377,6 @@ function showStudyView() {
 
 // Helper to re-render everything
 function renderAll() {
-    renderFolderBar();
     renderSidebar();
     renderHomeGrid();
 }
@@ -387,7 +401,6 @@ function createDeck() {
     if (!name) return;
     if (decks[name]) { alert("A deck with this name already exists!"); return; }
     decks[name] = []; saveDecks();
-    if (currentFolder !== "All") { deckFolders[name] = currentFolder; saveFolders(); }
     input.value = ""; closeModal("create-deck-modal"); switchDeck(name); openManageModal();
 }
 
@@ -938,7 +951,7 @@ document.addEventListener("keydown", (e) => {
 // ========== INIT ==========
 function init() {
     applyTheme(); loadDecks(); loadFolders(); loadFolderColors(); loadStats(); loadDeckStats(); renderStats();
-    renderFolderBar(); renderSidebar(); renderHomeGrid();
+    renderSidebar(); renderHomeGrid();
 
     // Add sidebar overlay for mobile
     const overlay = document.createElement("div");
