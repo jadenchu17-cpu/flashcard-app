@@ -50,6 +50,8 @@ const SAMPLE_DECKS = {
     ],
 };
 
+const FOLDER_COLORS = ["#e94560", "#6c5ce7", "#00b894", "#fdcb6e", "#e17055", "#0984e3", "#d63031", "#00cec9"];
+
 // ========== STATE ==========
 let decks = {};
 let currentDeckName = null;
@@ -60,12 +62,17 @@ let rightCount = 0;
 let wrongCount = 0;
 let wrongCards = [];
 let reviewMode = false;
-let stats = { streak: 0, bestStreak: 0, lastStudyDate: null, todayStudied: 0, todayCorrect: 0, todayDate: null };
-let deckFolders = {};
+let stats = { streak: 0, bestStreak: 0, lastStudyDate: null };
+let deckFolders = {};       // { "Korean": "Languages", ... }
+let folderColors = {};      // { "Languages": "#6c5ce7", ... }
+let deckStats = {};         // { "APUSH": { studied: 5, correct: 3 }, ... }
 let currentFolder = "All";
 let learnActive = false;
 let learnState = {};
 let sidebarOpen = false;
+let markedCards = new Set(); // tracks which card indices have been marked in current session
+let draggedDeckName = null;  // for drag-and-drop
+let editingFolder = null;    // folder name being edited
 
 // ========== LOCAL STORAGE ==========
 function saveDecks() { localStorage.setItem("fc-decks", JSON.stringify(decks)); }
@@ -79,16 +86,23 @@ function loadStats() {
     const saved = localStorage.getItem("fc-stats");
     if (saved) stats = JSON.parse(saved);
     const today = getTodayDate(), yesterday = getYesterdayDate();
-    if (stats.todayDate !== today) {
-        stats.todayStudied = 0; stats.todayCorrect = 0; stats.todayDate = today;
-        if (stats.lastStudyDate !== today && stats.lastStudyDate !== yesterday) stats.streak = 0;
-        saveStats();
-    }
+    if (stats.lastStudyDate !== today && stats.lastStudyDate !== yesterday) stats.streak = 0;
+    saveStats();
+}
+function saveDeckStats() { localStorage.setItem("fc-deck-stats", JSON.stringify(deckStats)); }
+function loadDeckStats() {
+    const saved = localStorage.getItem("fc-deck-stats");
+    if (saved) deckStats = JSON.parse(saved);
 }
 function saveFolders() { localStorage.setItem("fc-folders", JSON.stringify(deckFolders)); }
 function loadFolders() {
     const saved = localStorage.getItem("fc-folders");
     if (saved) deckFolders = JSON.parse(saved);
+}
+function saveFolderColors() { localStorage.setItem("fc-folder-colors", JSON.stringify(folderColors)); }
+function loadFolderColors() {
+    const saved = localStorage.getItem("fc-folder-colors");
+    if (saved) folderColors = JSON.parse(saved);
 }
 function getTodayDate() { return new Date().toISOString().split("T")[0]; }
 function getYesterdayDate() { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; }
@@ -127,42 +141,69 @@ function closeSidebar() {
 
 // ========== FOLDERS ==========
 function getFolderNames() { return [...new Set(Object.values(deckFolders))].sort(); }
+function getFolderColor(name) { return folderColors[name] || "#e94560"; }
 
 function renderFolderBar() {
     const container = document.getElementById("sidebar-folders");
     const folderNames = getFolderNames();
-    if (folderNames.length === 0) { container.innerHTML = ""; return; }
     container.innerHTML = "";
+
+    if (folderNames.length === 0) return;
 
     const allBtn = document.createElement("button");
     allBtn.className = "folder-btn" + (currentFolder === "All" ? " active" : "");
     allBtn.textContent = "All";
     allBtn.onclick = () => switchFolder("All");
+    // Drop zone: remove folder
+    allBtn.ondragover = (e) => { e.preventDefault(); };
     container.appendChild(allBtn);
 
     folderNames.forEach((name) => {
         const btn = document.createElement("button");
         btn.className = "folder-btn" + (currentFolder === name ? " active" : "");
-        btn.textContent = name;
+        const color = getFolderColor(name);
+        btn.innerHTML = '<span class="folder-color-dot" style="background:' + color + '"></span>' + escapeHtml(name);
         btn.onclick = () => switchFolder(name);
+        btn.oncontextmenu = (e) => { e.preventDefault(); openFolderEdit(name); };
+        // Drop zone
+        btn.ondragover = (e) => { e.preventDefault(); btn.classList.add("drag-over"); };
+        btn.ondragleave = () => { btn.classList.remove("drag-over"); };
+        btn.ondrop = (e) => {
+            e.preventDefault(); btn.classList.remove("drag-over");
+            if (draggedDeckName) { deckFolders[draggedDeckName] = name; saveFolders(); renderAll(); }
+        };
         container.appendChild(btn);
     });
+
+    // "No Folder" drop zone
+    const noBtn = document.createElement("span");
+    noBtn.className = "folder-no-folder";
+    noBtn.textContent = "No Folder";
+    noBtn.ondragover = (e) => { e.preventDefault(); noBtn.classList.add("drag-over"); };
+    noBtn.ondragleave = () => { noBtn.classList.remove("drag-over"); };
+    noBtn.ondrop = (e) => {
+        e.preventDefault(); noBtn.classList.remove("drag-over");
+        if (draggedDeckName) { delete deckFolders[draggedDeckName]; saveFolders(); renderAll(); }
+    };
+    container.appendChild(noBtn);
 
     const newBtn = document.createElement("button");
     newBtn.className = "folder-new-btn";
     newBtn.textContent = "+ Folder";
     newBtn.onclick = () => {
         const name = prompt("Folder name:");
-        if (name && name.trim()) { switchFolder(name.trim()); }
+        if (name && name.trim()) {
+            if (!folderColors[name.trim()]) folderColors[name.trim()] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
+            saveFolderColors();
+            switchFolder(name.trim());
+        }
     };
     container.appendChild(newBtn);
 }
 
 function switchFolder(name) {
     currentFolder = name;
-    renderFolderBar();
-    renderSidebar();
-    renderHomeGrid();
+    renderAll();
 }
 
 function getVisibleDeckNames() {
@@ -189,25 +230,90 @@ function assignDeckFolder() {
     const folder = document.getElementById("deck-folder-select").value;
     if (folder) deckFolders[currentDeckName] = folder;
     else delete deckFolders[currentDeckName];
-    saveFolders(); renderFolderBar(); renderSidebar(); renderHomeGrid();
+    saveFolders(); renderAll();
 }
 
 function createFolderFromManage() {
     const name = prompt("New folder name:");
     if (!name || !name.trim()) return;
     deckFolders[currentDeckName] = name.trim();
-    saveFolders(); populateFolderSelect(); renderFolderBar(); renderSidebar(); renderHomeGrid();
+    if (!folderColors[name.trim()]) folderColors[name.trim()] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
+    saveFolders(); saveFolderColors(); populateFolderSelect(); renderAll();
 }
 
-// ========== SIDEBAR DECK LIST ==========
+// ========== FOLDER EDIT (rename, color, delete) ==========
+function openFolderEdit(folderName) {
+    editingFolder = folderName;
+    document.getElementById("folder-edit-name").value = folderName;
+    renderColorPicker(getFolderColor(folderName));
+    openModal("folder-edit-modal");
+}
+
+function renderColorPicker(selectedColor) {
+    const container = document.getElementById("color-options");
+    container.innerHTML = "";
+    FOLDER_COLORS.forEach((color) => {
+        const swatch = document.createElement("div");
+        swatch.className = "color-swatch" + (color === selectedColor ? " selected" : "");
+        swatch.style.background = color;
+        swatch.onclick = () => {
+            container.querySelectorAll(".color-swatch").forEach((s) => s.classList.remove("selected"));
+            swatch.classList.add("selected");
+        };
+        container.appendChild(swatch);
+    });
+}
+
+function saveFolderEdit() {
+    const newName = document.getElementById("folder-edit-name").value.trim();
+    if (!newName) return;
+    const selectedSwatch = document.querySelector("#color-options .color-swatch.selected");
+    const newColor = selectedSwatch ? selectedSwatch.style.background : getFolderColor(editingFolder);
+
+    // Rename: update all decks that reference the old folder
+    if (newName !== editingFolder) {
+        for (const deckName in deckFolders) {
+            if (deckFolders[deckName] === editingFolder) deckFolders[deckName] = newName;
+        }
+        delete folderColors[editingFolder];
+        if (currentFolder === editingFolder) currentFolder = newName;
+    }
+    folderColors[newName] = newColor;
+    saveFolders(); saveFolderColors();
+    closeModal("folder-edit-modal");
+    renderAll();
+}
+
+function deleteFolder() {
+    if (!editingFolder) return;
+    if (!confirm('Delete folder "' + editingFolder + '"? Decks will be moved out of the folder.')) return;
+    for (const deckName in deckFolders) {
+        if (deckFolders[deckName] === editingFolder) delete deckFolders[deckName];
+    }
+    delete folderColors[editingFolder];
+    if (currentFolder === editingFolder) currentFolder = "All";
+    saveFolders(); saveFolderColors();
+    closeModal("folder-edit-modal");
+    renderAll();
+}
+
+// ========== SIDEBAR DECK LIST (with drag) ==========
 function renderSidebar() {
     const container = document.getElementById("sidebar-decks");
     container.innerHTML = "";
     getVisibleDeckNames().forEach((name) => {
         const item = document.createElement("div");
         item.className = "deck-item" + (name === currentDeckName ? " active" : "");
+        item.draggable = true;
         item.innerHTML = '<span>' + escapeHtml(name) + '</span><span class="deck-item-count">' + decks[name].length + '</span>';
         item.onclick = () => { switchDeck(name); closeSidebar(); };
+        // Drag events
+        item.ondragstart = (e) => {
+            draggedDeckName = name;
+            item.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+        };
+        item.ondragend = () => { draggedDeckName = null; item.classList.remove("dragging"); };
         container.appendChild(item);
     });
 }
@@ -221,11 +327,12 @@ function renderHomeGrid() {
         card.className = "home-deck-card";
         card.onclick = () => { switchDeck(name); closeSidebar(); };
         const folder = deckFolders[name];
+        const color = folder ? getFolderColor(folder) : null;
         card.innerHTML =
             '<span class="home-deck-card-name">' + escapeHtml(name) + '</span>' +
             '<div class="home-deck-card-info">' +
             '<span class="home-deck-card-count">' + decks[name].length + ' card' + (decks[name].length !== 1 ? 's' : '') + '</span>' +
-            (folder ? '<span class="home-deck-card-folder">' + escapeHtml(folder) + '</span>' : '') +
+            (folder ? '<span class="home-deck-card-folder" style="background:' + color + '22; color:' + color + '">' + escapeHtml(folder) + '</span>' : '') +
             '</div>';
         container.appendChild(card);
     });
@@ -253,17 +360,25 @@ function showStudyView() {
     document.getElementById("study-deck-name").textContent = currentDeckName;
 }
 
+// Helper to re-render everything
+function renderAll() {
+    renderFolderBar();
+    renderSidebar();
+    renderHomeGrid();
+}
+
 // ========== DECK MANAGEMENT ==========
 function switchDeck(name) {
     if (!decks[name]) return;
     exitLearnMode();
     currentDeckName = name; currentCards = decks[name]; currentIndex = 0;
     isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewMode = false;
+    markedCards = new Set();
     document.getElementById("right-count").textContent = 0;
     document.getElementById("wrong-count").textContent = 0;
     document.getElementById("review-label").style.display = "none";
     document.getElementById("review-btn").classList.remove("active");
-    updateReviewButton(); renderSidebar(); showStudyView(); updateCard();
+    updateReviewButton(); renderSidebar(); showStudyView(); updateCard(); renderStats();
 }
 
 function createDeck() {
@@ -280,6 +395,7 @@ function deleteDeck() {
     if (!currentDeckName) return;
     if (!confirm('Delete "' + currentDeckName + '" and all its cards?')) return;
     delete deckFolders[currentDeckName]; saveFolders();
+    delete deckStats[currentDeckName]; saveDeckStats();
     delete decks[currentDeckName]; saveDecks(); closeModal("manage-modal");
     showHomeView();
 }
@@ -312,7 +428,7 @@ function saveCard() {
     saveDecks(); cancelEdit(); renderCardList(); renderSidebar(); renderHomeGrid();
     if (!reviewMode) { currentCards = decks[currentDeckName];
         if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
-        updateCard(); }
+        updateCard(); renderStats(); }
 }
 
 function editCard(index) {
@@ -342,6 +458,7 @@ function deleteCard(index) {
             document.getElementById("answer").textContent = "Add cards via Manage Deck";
             document.getElementById("total-cards").textContent = "0";
             document.getElementById("current-card").textContent = "0"; }
+        renderStats();
     }
 }
 
@@ -368,27 +485,40 @@ function updateCard() {
 function nextCard() { if (currentCards.length === 0) return; if (currentIndex < currentCards.length - 1) { currentIndex++; updateCard(); } }
 function prevCard() { if (currentCards.length === 0) return; if (currentIndex > 0) { currentIndex--; updateCard(); } }
 
-function markRight() { if (currentCards.length === 0) return; rightCount++; document.getElementById("right-count").textContent = rightCount; recordStudy(true); nextCard(); }
+function markRight() {
+    if (currentCards.length === 0) return;
+    if (markedCards.has(currentIndex)) return; // already marked this card
+    markedCards.add(currentIndex);
+    rightCount++; document.getElementById("right-count").textContent = rightCount;
+    recordStudy(true);
+    nextCard();
+}
 function markWrong() {
-    if (currentCards.length === 0) return; wrongCount++;
+    if (currentCards.length === 0) return;
+    if (markedCards.has(currentIndex)) return; // already marked this card
+    markedCards.add(currentIndex);
+    wrongCount++;
     document.getElementById("wrong-count").textContent = wrongCount;
     const card = currentCards[currentIndex];
     if (!wrongCards.some((c) => c.q === card.q && c.a === card.a)) wrongCards.push(card);
-    updateReviewButton(); recordStudy(false); nextCard();
+    updateReviewButton(); recordStudy(false);
+    nextCard();
 }
 
 function shuffleDeck() {
     if (currentCards.length === 0) return;
     for (let i = currentCards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]]; }
-    currentIndex = 0; updateCard();
+    currentIndex = 0; markedCards = new Set(); updateCard();
 }
 
 // ========== REVIEW WRONG ==========
 function toggleReviewMode() {
     if (reviewMode) { reviewMode = false; currentCards = decks[currentDeckName]; currentIndex = 0;
+        markedCards = new Set();
         document.getElementById("review-label").style.display = "none";
         document.getElementById("review-btn").classList.remove("active"); updateCard();
     } else { if (wrongCards.length === 0) return; reviewMode = true; currentCards = [...wrongCards]; currentIndex = 0;
+        markedCards = new Set();
         document.getElementById("review-label").style.display = "inline";
         document.getElementById("review-btn").classList.add("active"); updateCard(); }
 }
@@ -398,22 +528,51 @@ function updateReviewButton() {
 }
 
 // ========== STATS ==========
+function getDeckStat(deckName) {
+    if (!deckStats[deckName]) deckStats[deckName] = { studied: 0, correct: 0 };
+    return deckStats[deckName];
+}
+
 function recordStudy(correct) {
     const today = getTodayDate(), yesterday = getYesterdayDate();
     if (stats.lastStudyDate !== today) {
         stats.streak = (stats.lastStudyDate === yesterday) ? stats.streak + 1 : 1;
         stats.lastStudyDate = today;
     }
-    stats.todayStudied++; if (correct) stats.todayCorrect++;
     if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
-    saveStats(); renderStats();
+    saveStats();
+
+    // Per-deck stats
+    if (currentDeckName) {
+        const ds = getDeckStat(currentDeckName);
+        ds.studied++;
+        if (correct) ds.correct++;
+        saveDeckStats();
+    }
+    renderStats();
 }
+
 function renderStats() {
     document.getElementById("streak").textContent = stats.streak;
     document.getElementById("best-streak").textContent = stats.bestStreak;
-    document.getElementById("today-studied").textContent = stats.todayStudied;
-    document.getElementById("accuracy").textContent = stats.todayStudied > 0
-        ? Math.round((stats.todayCorrect / stats.todayStudied) * 100) + "%" : "0%";
+
+    if (currentDeckName) {
+        const ds = getDeckStat(currentDeckName);
+        const total = decks[currentDeckName] ? decks[currentDeckName].length : 0;
+        document.getElementById("deck-studied").textContent = ds.studied + " / " + total;
+        document.getElementById("accuracy").textContent = ds.studied > 0
+            ? Math.round((ds.correct / ds.studied) * 100) + "%" : "0%";
+    } else {
+        document.getElementById("deck-studied").textContent = "0 / 0";
+        document.getElementById("accuracy").textContent = "0%";
+    }
+}
+
+function resetDeckStats() {
+    if (!currentDeckName) return;
+    deckStats[currentDeckName] = { studied: 0, correct: 0 };
+    saveDeckStats();
+    renderStats();
 }
 
 // ========== LEARN MODE ==========
@@ -684,7 +843,7 @@ function importCards() {
     document.getElementById("import-preview").textContent = "0 cards detected";
     document.getElementById("import-area").classList.add("hidden");
     renderCardList(); renderSidebar(); renderHomeGrid();
-    if (!reviewMode) { currentCards = decks[currentDeckName]; updateCard(); }
+    if (!reviewMode) { currentCards = decks[currentDeckName]; updateCard(); renderStats(); }
     alert("Imported " + cards.length + " cards!");
 }
 
@@ -756,7 +915,6 @@ document.addEventListener("keydown", (e) => {
 
     if (learnActive) return;
 
-    // Only handle shortcuts when in study view
     if (document.getElementById("study-view").classList.contains("hidden")) return;
 
     switch (e.key) {
@@ -770,7 +928,7 @@ document.addEventListener("keydown", (e) => {
 
 // ========== INIT ==========
 function init() {
-    applyTheme(); loadDecks(); loadFolders(); loadStats(); renderStats();
+    applyTheme(); loadDecks(); loadFolders(); loadFolderColors(); loadStats(); loadDeckStats(); renderStats();
     renderFolderBar(); renderSidebar(); renderHomeGrid();
 
     // Add sidebar overlay for mobile
@@ -780,7 +938,6 @@ function init() {
     overlay.onclick = closeSidebar;
     document.body.appendChild(overlay);
 
-    // Start on home view
     showHomeView();
 }
 init();

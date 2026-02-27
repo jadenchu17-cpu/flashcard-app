@@ -10,6 +10,7 @@
     <div class="app-layout">
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
+            <button class="home-btn" onclick="showHomeView(); closeSidebar();" title="Home">&#127968;</button>
             <div class="sidebar-header">
                 <h2 class="sidebar-title">Decks</h2>
                 <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">&#10005;</button>
@@ -29,25 +30,6 @@
                 </div>
             </div>
 
-            <div class="stats-bar">
-                <div class="stat">
-                    <span class="stat-value" id="streak">0</span>
-                    <span class="stat-label">Day Streak</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-value" id="today-studied">0</span>
-                    <span class="stat-label">Studied Today</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-value" id="accuracy">0%</span>
-                    <span class="stat-label">Accuracy</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-value" id="best-streak">0</span>
-                    <span class="stat-label">Best Streak</span>
-                </div>
-            </div>
-
             <!-- Home View -->
             <div id="home-view">
                 <div class="home-welcome">
@@ -62,6 +44,26 @@
                 <div class="study-header">
                     <button class="back-home-btn" onclick="showHomeView()">&#8592; Back</button>
                     <span class="study-deck-name" id="study-deck-name"></span>
+                </div>
+
+                <div class="stats-bar" id="stats-bar">
+                    <div class="stat">
+                        <span class="stat-value" id="streak">0</span>
+                        <span class="stat-label">Day Streak</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="deck-studied">0 / 0</span>
+                        <span class="stat-label">Studied</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="accuracy">0%</span>
+                        <span class="stat-label">Accuracy</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="best-streak">0</span>
+                        <span class="stat-label">Best Streak</span>
+                    </div>
+                    <button class="stat-reset-btn" onclick="resetDeckStats()" title="Reset deck stats">&#8635;</button>
                 </div>
 
                 <div class="progress" id="progress-bar">
@@ -221,6 +223,22 @@
             <div class="modal-buttons">
                 <button class="modal-cancel delete-deck-btn" onclick="deleteDeck()">Delete Deck</button>
                 <button class="modal-confirm" onclick="closeModal('manage-modal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Folder Edit Modal -->
+    <div class="modal-overlay" id="folder-edit-modal" onclick="closeModalOnOverlay(event, 'folder-edit-modal')">
+        <div class="modal">
+            <h2>Edit Folder</h2>
+            <input type="text" id="folder-edit-name" placeholder="Folder name" />
+            <div class="color-picker">
+                <label>Color:</label>
+                <div class="color-options" id="color-options"></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-cancel" onclick="deleteFolder()">Delete Folder</button>
+                <button class="modal-confirm" onclick="saveFolderEdit()">Save</button>
             </div>
         </div>
     </div>
