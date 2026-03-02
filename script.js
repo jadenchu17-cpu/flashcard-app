@@ -1294,18 +1294,21 @@ function editorImportCards() {
 
 // ========== QUICK IMPORT ==========
 function openQuickImport() {
-    document.getElementById("quick-import-modal").classList.remove("hidden");
+    document.getElementById("quick-import-modal").classList.add("active");
     document.getElementById("quick-import-name").value = "";
     document.getElementById("quick-import-text").value = "";
     document.getElementById("quick-import-count").textContent = "0 cards detected";
     document.getElementById("quick-import-preview").innerHTML = "";
     document.getElementById("quick-import-preview").classList.add("hidden");
     document.getElementById("quick-import-btn").disabled = true;
-    document.getElementById("quick-import-text").focus();
+    document.getElementById("ai-key-row").classList.add("hidden");
+    document.getElementById("ai-key-hint").classList.add("hidden");
+    aiSortedCards = [];
+    setTimeout(() => document.getElementById("quick-import-name").focus(), 100);
 }
 
 function closeQuickImport() {
-    document.getElementById("quick-import-modal").classList.add("hidden");
+    document.getElementById("quick-import-modal").classList.remove("active");
 }
 
 function onQuickImportInput() {
@@ -1337,12 +1340,111 @@ function quickImportCreate() {
     const name = document.getElementById("quick-import-name").value.trim();
     if (!name) { alert("Please enter a set name."); document.getElementById("quick-import-name").focus(); return; }
     if (decks[name]) { alert("A set named \"" + name + "\" already exists."); return; }
-    const cards = parseImportText(document.getElementById("quick-import-text").value);
-    if (cards.length === 0) { alert("No cards detected. Check your format."); return; }
+    // Use AI-sorted cards if available, otherwise fall back to parseImportText
+    let cards = aiSortedCards.length > 0 ? aiSortedCards : parseImportText(document.getElementById("quick-import-text").value);
+    if (cards.length === 0) { alert("No cards detected. Try pasting text and clicking AI Sort."); return; }
     decks[name] = cards.map(c => ({ q: c.q, a: c.a }));
     saveDecks();
+    aiSortedCards = [];
     closeQuickImport();
     switchDeck(name);
+}
+
+// ========== GEMINI AI IMPORT ==========
+let aiSortedCards = [];
+
+function getGeminiKey() { return localStorage.getItem("fc-gemini-key") || ""; }
+function saveGeminiKey() {
+    const key = document.getElementById("gemini-key-input").value.trim();
+    if (!key) { alert("Please paste your API key."); return; }
+    localStorage.setItem("fc-gemini-key", key);
+    document.getElementById("ai-key-row").classList.add("hidden");
+    document.getElementById("ai-key-hint").classList.add("hidden");
+    aiSortImport();
+}
+
+async function aiSortImport() {
+    const text = document.getElementById("quick-import-text").value.trim();
+    if (!text) { alert("Paste some text first."); return; }
+
+    const key = getGeminiKey();
+    if (!key) {
+        document.getElementById("ai-key-row").classList.remove("hidden");
+        document.getElementById("ai-key-hint").classList.remove("hidden");
+        document.getElementById("gemini-key-input").focus();
+        return;
+    }
+
+    const btn = document.getElementById("ai-sort-btn");
+    btn.textContent = "Sorting...";
+    btn.disabled = true;
+
+    try {
+        const prompt = "Extract flashcard term/definition pairs from the following text. " +
+            "Return ONLY a JSON array of objects with \"q\" (term) and \"a\" (definition) keys. " +
+            "Each term should be a key concept, and each definition should be a clear, concise explanation. " +
+            "If the text already has clear term-definition pairs, preserve them. " +
+            "If it's unstructured notes, identify the key terms and create definitions from the surrounding context. " +
+            "Return valid JSON only, no markdown, no explanation.\n\nText:\n" + text;
+
+        const response = await fetch(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { temperature: 0.2 }
+                })
+            }
+        );
+
+        if (!response.ok) {
+            const err = await response.json();
+            if (response.status === 400 || response.status === 403) {
+                localStorage.removeItem("fc-gemini-key");
+                alert("Invalid API key. Please enter a valid Gemini API key.");
+                document.getElementById("ai-key-row").classList.remove("hidden");
+                document.getElementById("ai-key-hint").classList.remove("hidden");
+            } else {
+                alert("API error: " + (err.error?.message || response.statusText));
+            }
+            return;
+        }
+
+        const data = await response.json();
+        let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        // Strip markdown code fence if present
+        resultText = resultText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+
+        const cards = JSON.parse(resultText);
+        if (!Array.isArray(cards) || cards.length === 0) {
+            alert("AI couldn't extract any cards from that text. Try different content.");
+            return;
+        }
+
+        aiSortedCards = cards.filter(c => c.q && c.a).map(c => ({ q: String(c.q).trim(), a: String(c.a).trim() }));
+        const count = aiSortedCards.length;
+        document.getElementById("quick-import-count").textContent = count + " card" + (count !== 1 ? "s" : "") + " detected (AI)";
+
+        const preview = document.getElementById("quick-import-preview");
+        preview.classList.remove("hidden");
+        let html = '<div class="import-preview-header"><span>#</span><span>Term</span><span>Definition</span></div>';
+        aiSortedCards.forEach((c, i) => {
+            html += '<div class="import-preview-row">' +
+                '<span class="import-preview-num">' + (i + 1) + '</span>' +
+                '<span class="import-preview-term">' + escapeHtml(c.q) + '</span>' +
+                '<span class="import-preview-def">' + escapeHtml(c.a) + '</span></div>';
+        });
+        preview.innerHTML = html;
+        document.getElementById("quick-import-btn").disabled = false;
+
+    } catch (err) {
+        alert("Error: " + err.message);
+    } finally {
+        btn.textContent = "AI Sort";
+        btn.disabled = false;
+    }
 }
 
 // ========== AI DEFINITIONS (no API key needed) ==========

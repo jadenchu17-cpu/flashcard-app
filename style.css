@@ -932,6 +932,39 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 /* ========== UTILITY ========== */
 .hidden { display: none !important; }
 
+/* ========== AI IMPORT ========== */
+.ai-import-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+}
+.ai-sort-btn {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #6c5ce7, #e94560);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+.ai-sort-btn:hover { opacity: 0.9; transform: scale(1.02); }
+.ai-sort-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.ai-key-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin: 8px 0;
+}
+.ai-key-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 4px 0 8px;
+}
+
 /* ========== IMPORT PREVIEW ========== */
 .import-preview-table {
     max-height: 300px;

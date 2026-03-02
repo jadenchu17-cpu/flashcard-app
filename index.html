@@ -358,7 +358,7 @@
     </div>
 
     <!-- Quick Import Modal -->
-    <div class="modal-overlay hidden" id="quick-import-modal">
+    <div class="modal-overlay" id="quick-import-modal">
         <div class="modal" style="max-width: 650px;">
             <h3>Quick Import</h3>
             <div class="editor-field">
@@ -366,10 +366,18 @@
                 <input type="text" id="quick-import-name" class="editor-input" placeholder="Enter a name for the new set" />
             </div>
             <div class="editor-field">
-                <label class="editor-label">Paste your terms &amp; definitions</label>
-                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;term | definition&#10;&#10;One card per line." rows="8"></textarea>
+                <label class="editor-label">Paste your text (notes, lists, study material, anything)</label>
+                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste anything here — notes, a list of terms, study material, etc.&#10;&#10;Click 'AI Sort' to have AI extract terms &amp; definitions,&#10;or use formatted lines like:&#10;term - definition&#10;term: definition" rows="8"></textarea>
             </div>
-            <span class="import-hint" id="quick-import-count">0 cards detected</span>
+            <div class="ai-import-row">
+                <button class="ai-sort-btn" id="ai-sort-btn" onclick="aiSortImport()">AI Sort</button>
+                <span class="import-hint" id="quick-import-count">0 cards detected</span>
+            </div>
+            <div class="ai-key-row hidden" id="ai-key-row">
+                <input type="password" id="gemini-key-input" class="editor-input" placeholder="Paste your Gemini API key" style="margin-bottom:0" />
+                <button class="modal-confirm" onclick="saveGeminiKey()" style="white-space:nowrap">Save Key</button>
+            </div>
+            <p class="ai-key-hint hidden" id="ai-key-hint">Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">Google AI Studio</a></p>
             <div class="import-preview-table hidden" id="quick-import-preview"></div>
             <div class="modal-buttons" style="margin-top: 15px;">
                 <button class="modal-cancel" onclick="closeQuickImport()">Cancel</button>
