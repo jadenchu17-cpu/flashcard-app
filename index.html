@@ -315,9 +315,11 @@
                         <button class="import-toggle-btn" id="editor-import-toggle" onclick="toggleEditorImport()">+ Import</button>
                         <div class="import-area hidden" id="editor-import-area">
                             <textarea id="editor-import-text" oninput="onEditorImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;&#10;One card per line." rows="6"></textarea>
+                            <span class="import-hint" id="editor-import-count">0 cards detected</span>
+                            <div class="import-preview-table hidden" id="editor-import-preview-table"></div>
                             <div class="import-actions">
-                                <span class="import-hint" id="editor-import-preview">0 cards detected</span>
-                                <button class="modal-confirm" onclick="editorImportCards()">Import All</button>
+                                <button class="modal-cancel" onclick="toggleEditorImport()">Cancel</button>
+                                <button class="modal-confirm" id="editor-import-btn" onclick="editorImportCards()" disabled>Add Cards</button>
                             </div>
                         </div>
                     </div>
@@ -351,6 +353,27 @@
             <div class="modal-buttons">
                 <button class="modal-cancel" onclick="deleteFolder()">Delete Folder</button>
                 <button class="modal-confirm" onclick="saveFolderEdit()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Import Modal -->
+    <div class="modal-overlay hidden" id="quick-import-modal">
+        <div class="modal" style="max-width: 650px;">
+            <h3>Quick Import</h3>
+            <div class="editor-field">
+                <label class="editor-label">Set Name</label>
+                <input type="text" id="quick-import-name" class="editor-input" placeholder="Enter a name for the new set" />
+            </div>
+            <div class="editor-field">
+                <label class="editor-label">Paste your terms &amp; definitions</label>
+                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;term | definition&#10;&#10;One card per line." rows="8"></textarea>
+            </div>
+            <span class="import-hint" id="quick-import-count">0 cards detected</span>
+            <div class="import-preview-table hidden" id="quick-import-preview"></div>
+            <div class="modal-buttons" style="margin-top: 15px;">
+                <button class="modal-cancel" onclick="closeQuickImport()">Cancel</button>
+                <button class="modal-confirm" id="quick-import-btn" onclick="quickImportCreate()" disabled>Create Set</button>
             </div>
         </div>
     </div>

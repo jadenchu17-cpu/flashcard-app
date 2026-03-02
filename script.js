@@ -376,6 +376,12 @@ function renderHomeGrid() {
     newCard.textContent = "+ New Set";
     newCard.onclick = () => openEditor("create");
     container.appendChild(newCard);
+
+    const importCard = document.createElement("div");
+    importCard.className = "home-new-deck-card";
+    importCard.textContent = "+ Quick Import";
+    importCard.onclick = () => openQuickImport();
+    container.appendChild(importCard);
 }
 
 function showHomeView() {
@@ -1244,8 +1250,29 @@ function toggleEditorImport() {
 
 function onEditorImportInput() {
     const cards = parseImportText(document.getElementById("editor-import-text").value);
-    document.getElementById("editor-import-preview").textContent =
-        cards.length + " card" + (cards.length !== 1 ? "s" : "") + " detected";
+    const count = cards.length;
+    document.getElementById("editor-import-count").textContent =
+        count + " card" + (count !== 1 ? "s" : "") + " detected";
+    const preview = document.getElementById("editor-import-preview-table");
+    const btn = document.getElementById("editor-import-btn");
+    if (count > 0) {
+        preview.classList.remove("hidden");
+        let html = '<div class="import-preview-header"><span>#</span><span>Term</span><span>Definition</span></div>';
+        cards.forEach((c, i) => {
+            html += '<div class="import-preview-row">' +
+                '<span class="import-preview-num">' + (i + 1) + '</span>' +
+                '<span class="import-preview-term">' + escapeHtml(c.q) + '</span>' +
+                '<span class="import-preview-def">' + escapeHtml(c.a) + '</span></div>';
+        });
+        preview.innerHTML = html;
+        btn.disabled = false;
+        btn.textContent = "Add " + count + " Card" + (count !== 1 ? "s" : "");
+    } else {
+        preview.classList.add("hidden");
+        preview.innerHTML = "";
+        btn.disabled = true;
+        btn.textContent = "Add Cards";
+    }
 }
 
 function editorImportCards() {
@@ -1256,9 +1283,66 @@ function editorImportCards() {
         editorCardRows.push({ q: card.q, a: card.a, img: null });
     }
     document.getElementById("editor-import-text").value = "";
-    document.getElementById("editor-import-preview").textContent = "0 cards detected";
+    document.getElementById("editor-import-count").textContent = "0 cards detected";
+    document.getElementById("editor-import-preview-table").innerHTML = "";
+    document.getElementById("editor-import-preview-table").classList.add("hidden");
+    document.getElementById("editor-import-btn").disabled = true;
+    document.getElementById("editor-import-btn").textContent = "Add Cards";
     document.getElementById("editor-import-area").classList.add("hidden");
     renderEditorCards();
+}
+
+// ========== QUICK IMPORT ==========
+function openQuickImport() {
+    document.getElementById("quick-import-modal").classList.remove("hidden");
+    document.getElementById("quick-import-name").value = "";
+    document.getElementById("quick-import-text").value = "";
+    document.getElementById("quick-import-count").textContent = "0 cards detected";
+    document.getElementById("quick-import-preview").innerHTML = "";
+    document.getElementById("quick-import-preview").classList.add("hidden");
+    document.getElementById("quick-import-btn").disabled = true;
+    document.getElementById("quick-import-text").focus();
+}
+
+function closeQuickImport() {
+    document.getElementById("quick-import-modal").classList.add("hidden");
+}
+
+function onQuickImportInput() {
+    const cards = parseImportText(document.getElementById("quick-import-text").value);
+    const count = cards.length;
+    document.getElementById("quick-import-count").textContent =
+        count + " card" + (count !== 1 ? "s" : "") + " detected";
+    const preview = document.getElementById("quick-import-preview");
+    const btn = document.getElementById("quick-import-btn");
+    if (count > 0) {
+        preview.classList.remove("hidden");
+        let html = '<div class="import-preview-header"><span>#</span><span>Term</span><span>Definition</span></div>';
+        cards.forEach((c, i) => {
+            html += '<div class="import-preview-row">' +
+                '<span class="import-preview-num">' + (i + 1) + '</span>' +
+                '<span class="import-preview-term">' + escapeHtml(c.q) + '</span>' +
+                '<span class="import-preview-def">' + escapeHtml(c.a) + '</span></div>';
+        });
+        preview.innerHTML = html;
+        btn.disabled = false;
+    } else {
+        preview.classList.add("hidden");
+        preview.innerHTML = "";
+        btn.disabled = true;
+    }
+}
+
+function quickImportCreate() {
+    const name = document.getElementById("quick-import-name").value.trim();
+    if (!name) { alert("Please enter a set name."); document.getElementById("quick-import-name").focus(); return; }
+    if (decks[name]) { alert("A set named \"" + name + "\" already exists."); return; }
+    const cards = parseImportText(document.getElementById("quick-import-text").value);
+    if (cards.length === 0) { alert("No cards detected. Check your format."); return; }
+    decks[name] = cards.map(c => ({ q: c.q, a: c.a }));
+    saveDecks();
+    closeQuickImport();
+    switchDeck(name);
 }
 
 // ========== AI DEFINITIONS (no API key needed) ==========
