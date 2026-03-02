@@ -1454,38 +1454,35 @@ async function onImportFileSelected() {
 function smartParseTerms(text) {
     const cards = [];
     const seen = new Set();
+    const skipWords = /^(the|a|an|and|or|also|often|called|known|as|through|including|toward|especially|over|its|their|was|were|is|are|had|have|has|with|from|that|this|these|those|which|who|of|in|to|for|by)\s+/gi;
 
-    // Pattern 1: term (definition in parentheses) — most common in lecture notes
-    // Matches: word/phrase followed by (explanation)
-    const parenRegex = /([A-Z][A-Za-z\s\-'']+?)\s*\(([^)]{15,})\)/g;
-    let match;
-    while ((match = parenRegex.exec(text)) !== null) {
-        const term = match[1].trim().replace(/^(the|a|an|and|or|of|in|to|for|by|as)\s+/i, "").trim();
-        const def = match[2].trim();
-        if (term.length >= 3 && term.length <= 80 && !seen.has(term.toLowerCase())) {
-            seen.add(term.toLowerCase());
-            cards.push({ q: term, a: def });
-        }
-    }
+    // Split by "(" to find all parenthetical blocks
+    const parts = text.split("(");
+    for (let i = 1; i < parts.length; i++) {
+        const closeParen = parts[i].indexOf(")");
+        if (closeParen === -1) continue;
 
-    // Pattern 2: Section headers as terms — lines that look like titles
-    // e.g. "Russo - Japanese War (1904 – 1905)" or "The Manchurian Incident (1931)"
-    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
-    for (const line of lines) {
-        const headerMatch = line.match(/^([A-Z][A-Za-z\s\-''"]+(?:\([^)]*\d{4}[^)]*\))?)\s*$/);
-        if (headerMatch && headerMatch[1].length > 5 && headerMatch[1].length < 80) {
-            const term = headerMatch[1].trim();
-            if (!seen.has(term.toLowerCase())) {
-                // Look for the first bullet point after this header as a definition
-                const idx = text.indexOf(line);
-                const after = text.substring(idx + line.length, idx + line.length + 500);
-                const bulletMatch = after.match(/[•\-]\s*(.{20,200}?)(?:\.|$)/);
-                if (bulletMatch) {
-                    seen.add(term.toLowerCase());
-                    cards.push({ q: term, a: bulletMatch[1].trim() });
-                }
-            }
-        }
+        const inside = parts[i].substring(0, closeParen).trim();
+        if (inside.length < 15) continue; // too short to be a definition
+        if (/^\d{4}/.test(inside)) continue; // skip dates like (1904-1905)
+        if (/^[a-z]/.test(inside) === false && /^[A-Z]{2,}/.test(inside)) continue; // skip acronyms
+
+        // Get the text before this parenthesis — grab last 1-6 words as term
+        const before = parts[i - 1].trim();
+        const words = before.split(/\s+/).slice(-6);
+        let term = words.join(" ");
+
+        // Clean up: remove leading bullets, numbers, punctuation, common words
+        term = term.replace(/^[•\-\d.,;:\s*]+/, "").trim();
+        term = term.replace(skipWords, "").trim();
+        term = term.replace(skipWords, "").trim(); // run twice for "the" + "a" combos
+
+        if (term.length < 2 || term.length > 60) continue;
+        const key = term.toLowerCase();
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+        cards.push({ q: term, a: inside });
     }
 
     return cards;
