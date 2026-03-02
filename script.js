@@ -418,6 +418,8 @@ function switchDeck(name) {
     isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewWrongCards = []; reviewMode = false;
     // Restore (or create) the per-deck marked set
     if (!deckMarkedCards[name]) deckMarkedCards[name] = new Set();
+    // Reset per-deck stats each time you switch sets
+    deckStats[name] = { studied: 0, correct: 0 }; saveDeckStats();
     resetTrackingCounts();
     document.getElementById("review-label").style.display = "none";
     document.getElementById("review-btn").classList.remove("active");
@@ -638,12 +640,15 @@ function recordStudy(correct) {
     if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
     saveStats();
 
-    // Per-deck stats
+    // Per-deck stats — cap at the number of cards in the set
     if (currentDeckName) {
         const ds = getDeckStat(currentDeckName);
-        ds.studied++;
-        if (correct) ds.correct++;
-        saveDeckStats();
+        const maxCards = currentCards.length;
+        if (ds.studied < maxCards) {
+            ds.studied++;
+            if (correct) ds.correct++;
+            saveDeckStats();
+        }
     }
     renderStats();
 }
