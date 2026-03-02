@@ -1304,6 +1304,7 @@ function openQuickImport() {
     document.getElementById("ai-key-row").classList.add("hidden");
     document.getElementById("ai-key-hint").classList.add("hidden");
     aiSortedCards = [];
+    removeImportFile();
     setTimeout(() => document.getElementById("quick-import-name").focus(), 100);
 }
 
@@ -1363,9 +1364,96 @@ function saveGeminiKey() {
     aiSortImport();
 }
 
+// ========== FILE UPLOAD FOR IMPORT ==========
+let importFileData = null; // { type: "image"|"text", mimeType, base64, text }
+
+function pickImportFile() {
+    document.getElementById("import-file-input").click();
+}
+
+function removeImportFile() {
+    importFileData = null;
+    document.getElementById("import-file-input").value = "";
+    document.getElementById("import-file-info").classList.add("hidden");
+    document.getElementById("import-file-name").textContent = "";
+}
+
+async function onImportFileSelected() {
+    const input = document.getElementById("import-file-input");
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const name = file.name;
+    const ext = name.split(".").pop().toLowerCase();
+
+    document.getElementById("import-file-name").textContent = name;
+    document.getElementById("import-file-info").classList.remove("hidden");
+
+    if (ext === "txt") {
+        // Text file: read as text and put in textarea
+        const text = await file.text();
+        document.getElementById("quick-import-text").value = text;
+        importFileData = { type: "text", text: text };
+        onQuickImportInput();
+    } else if (ext === "pdf") {
+        // PDF: extract text with pdf.js
+        document.getElementById("import-file-name").textContent = name + " (reading...)";
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            if (typeof pdfjsLib !== "undefined") {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = "";
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(" ") + "\n";
+                }
+                if (fullText.trim().length > 0) {
+                    document.getElementById("quick-import-text").value = fullText.trim();
+                    importFileData = { type: "text", text: fullText.trim() };
+                    onQuickImportInput();
+                } else {
+                    // PDF has no selectable text (scanned) — send as image to Gemini
+                    const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ""));
+                    importFileData = { type: "image", mimeType: "application/pdf", base64: base64 };
+                }
+            } else {
+                // pdf.js not loaded — send raw PDF to Gemini
+                const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ""));
+                importFileData = { type: "image", mimeType: "application/pdf", base64: base64 };
+            }
+        } catch (err) {
+            alert("Error reading PDF: " + err.message);
+            removeImportFile();
+            return;
+        }
+        document.getElementById("import-file-name").textContent = name;
+    } else {
+        // Image file: read as base64 for Gemini multimodal
+        if (file.size > 10 * 1024 * 1024) { alert("File too large (max 10MB)."); removeImportFile(); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+            const dataUrl = reader.result;
+            const mimeType = file.type || "image/jpeg";
+            // Compress large images
+            if (file.size > 2 * 1024 * 1024) {
+                compressImage(dataUrl, 1200, 0.8, (compressed) => {
+                    const base64 = compressed.split(",")[1];
+                    importFileData = { type: "image", mimeType: "image/jpeg", base64: base64 };
+                });
+            } else {
+                const base64 = dataUrl.split(",")[1];
+                importFileData = { type: "image", mimeType: mimeType, base64: base64 };
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 async function aiSortImport() {
     const text = document.getElementById("quick-import-text").value.trim();
-    if (!text) { alert("Paste some text first."); return; }
+    const hasFile = importFileData && importFileData.type === "image" && importFileData.base64;
+    if (!text && !hasFile) { alert("Paste some text or upload a file first."); return; }
 
     const key = getGeminiKey();
     if (!key) {
@@ -1380,12 +1468,19 @@ async function aiSortImport() {
     btn.disabled = true;
 
     try {
-        const prompt = "Extract flashcard term/definition pairs from the following text. " +
+        const promptText = "Extract flashcard term/definition pairs from the following content. " +
             "Return ONLY a JSON array of objects with \"q\" (term) and \"a\" (definition) keys. " +
             "Each term should be a key concept, and each definition should be a clear, concise explanation. " +
-            "If the text already has clear term-definition pairs, preserve them. " +
-            "If it's unstructured notes, identify the key terms and create definitions from the surrounding context. " +
-            "Return valid JSON only, no markdown, no explanation.\n\nText:\n" + text;
+            "If the content has clear term-definition pairs, preserve them. " +
+            "If it's unstructured notes, slides, or images, identify all key terms and create definitions from the context. " +
+            "Return valid JSON only, no markdown, no explanation." +
+            (text ? "\n\nText:\n" + text : "");
+
+        // Build parts array — text prompt + optional file
+        const parts = [{ text: promptText }];
+        if (hasFile) {
+            parts.push({ inlineData: { mimeType: importFileData.mimeType, data: importFileData.base64 } });
+        }
 
         const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
         let response = null;
@@ -1396,7 +1491,7 @@ async function aiSortImport() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
+                        contents: [{ parts: parts }],
                         generationConfig: { temperature: 0.2 }
                     })
                 }

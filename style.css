@@ -932,6 +932,48 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 /* ========== UTILITY ========== */
 .hidden { display: none !important; }
 
+/* ========== FILE UPLOAD ========== */
+.file-upload-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.file-upload-btn {
+    padding: 6px 14px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+.file-upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text);
+}
+.file-info span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+.file-remove-btn:hover { color: var(--accent); }
+
 /* ========== AI IMPORT ========== */
 .ai-import-row {
     display: flex;

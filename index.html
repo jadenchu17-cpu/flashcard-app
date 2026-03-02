@@ -366,8 +366,16 @@
                 <input type="text" id="quick-import-name" class="editor-input" placeholder="Enter a name for the new set" />
             </div>
             <div class="editor-field">
-                <label class="editor-label">Paste your text (notes, lists, study material, anything)</label>
-                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste anything here — notes, a list of terms, study material, etc.&#10;&#10;Click 'AI Sort' to have AI extract terms &amp; definitions,&#10;or use formatted lines like:&#10;term - definition&#10;term: definition" rows="8"></textarea>
+                <div class="file-upload-label-row">
+                    <label class="editor-label">Paste text or upload a file</label>
+                    <button class="file-upload-btn" onclick="pickImportFile()">Upload File</button>
+                </div>
+                <input type="file" id="import-file-input" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp" style="display:none" onchange="onImportFileSelected()" />
+                <div class="file-info hidden" id="import-file-info">
+                    <span id="import-file-name"></span>
+                    <button class="file-remove-btn" onclick="removeImportFile()">&times;</button>
+                </div>
+                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste anything here — notes, a list of terms, study material, etc.&#10;&#10;Or upload a file (PDF, image, text) above.&#10;&#10;Then click 'AI Sort' to generate flashcards." rows="8"></textarea>
             </div>
             <div class="ai-import-row">
                 <button class="ai-sort-btn" id="ai-sort-btn" onclick="aiSortImport()">AI Sort</button>
@@ -386,6 +394,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="script.js"></script>
     <script>
     if ('serviceWorker' in navigator) {
