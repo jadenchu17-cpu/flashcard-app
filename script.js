@@ -129,12 +129,15 @@ function toggleTheme() {
     const next = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
     html.setAttribute("data-theme", next);
     document.getElementById("theme-toggle").textContent = next === "dark" ? "\u{1F4A1}" : "\u{2600}\u{FE0F}";
+    document.querySelector('meta[name="theme-color"]').content = next === "dark" ? "#1a1a2e" : "#f0f2f5";
     saveTheme(next);
 }
 function applyTheme() {
     const theme = loadTheme();
     document.documentElement.setAttribute("data-theme", theme);
     document.getElementById("theme-toggle").textContent = theme === "dark" ? "\u{1F4A1}" : "\u{2600}\u{FE0F}";
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.content = theme === "dark" ? "#1a1a2e" : "#f0f2f5";
 }
 
 // ========== SIDEBAR ==========

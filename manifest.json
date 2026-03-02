@@ -1,0 +1,19 @@
+{
+  "name": "Flashcard Study App",
+  "short_name": "Flashcards",
+  "description": "Study flashcards with learn mode, test mode, and progress tracking",
+  "start_url": "/flashcard-app/",
+  "scope": "/flashcard-app/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
