@@ -654,17 +654,13 @@ function recordStudy(correct) {
 }
 
 function renderStats() {
-    document.getElementById("streak").textContent = stats.streak;
     document.getElementById("best-streak").textContent = stats.bestStreak;
 
     if (currentDeckName) {
         const ds = getDeckStat(currentDeckName);
-        const total = decks[currentDeckName] ? decks[currentDeckName].length : 0;
-        document.getElementById("deck-studied").textContent = ds.studied + " / " + total;
         document.getElementById("accuracy").textContent = ds.studied > 0
             ? Math.round((ds.correct / ds.studied) * 100) + "%" : "0%";
     } else {
-        document.getElementById("deck-studied").textContent = "0 / 0";
         document.getElementById("accuracy").textContent = "0%";
     }
 }
