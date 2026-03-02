@@ -1450,15 +1450,87 @@ async function onImportFileSelected() {
     }
 }
 
+// Smart client-side parser: extracts "term (definition)" patterns from lecture notes
+function smartParseTerms(text) {
+    const cards = [];
+    const seen = new Set();
+
+    // Pattern 1: term (definition in parentheses) — most common in lecture notes
+    // Matches: word/phrase followed by (explanation)
+    const parenRegex = /([A-Z][A-Za-z\s\-'']+?)\s*\(([^)]{15,})\)/g;
+    let match;
+    while ((match = parenRegex.exec(text)) !== null) {
+        const term = match[1].trim().replace(/^(the|a|an|and|or|of|in|to|for|by|as)\s+/i, "").trim();
+        const def = match[2].trim();
+        if (term.length >= 3 && term.length <= 80 && !seen.has(term.toLowerCase())) {
+            seen.add(term.toLowerCase());
+            cards.push({ q: term, a: def });
+        }
+    }
+
+    // Pattern 2: Section headers as terms — lines that look like titles
+    // e.g. "Russo - Japanese War (1904 – 1905)" or "The Manchurian Incident (1931)"
+    const lines = text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    for (const line of lines) {
+        const headerMatch = line.match(/^([A-Z][A-Za-z\s\-''"]+(?:\([^)]*\d{4}[^)]*\))?)\s*$/);
+        if (headerMatch && headerMatch[1].length > 5 && headerMatch[1].length < 80) {
+            const term = headerMatch[1].trim();
+            if (!seen.has(term.toLowerCase())) {
+                // Look for the first bullet point after this header as a definition
+                const idx = text.indexOf(line);
+                const after = text.substring(idx + line.length, idx + line.length + 500);
+                const bulletMatch = after.match(/[•\-]\s*(.{20,200}?)(?:\.|$)/);
+                if (bulletMatch) {
+                    seen.add(term.toLowerCase());
+                    cards.push({ q: term, a: bulletMatch[1].trim() });
+                }
+            }
+        }
+    }
+
+    return cards;
+}
+
 async function aiSortImport() {
     const text = document.getElementById("quick-import-text").value.trim();
     const hasFile = importFileData && importFileData.type === "image" && importFileData.base64;
     if (!text && !hasFile) { alert("Paste some text or upload a file first."); return; }
 
     const key = getGeminiKey();
-    if (!key) {
+
+    // No API key: use smart client-side parser (works great for lecture notes)
+    if (!key && !hasFile) {
+        const cards = smartParseTerms(text);
+        if (cards.length > 0) {
+            aiSortedCards = cards;
+            const count = cards.length;
+            document.getElementById("quick-import-count").textContent = count + " card" + (count !== 1 ? "s" : "") + " detected (Smart Parse)";
+            const preview = document.getElementById("quick-import-preview");
+            preview.classList.remove("hidden");
+            let html = '<div class="import-preview-header"><span>#</span><span>Term</span><span>Definition</span></div>';
+            cards.forEach((c, i) => {
+                html += '<div class="import-preview-row">' +
+                    '<span class="import-preview-num">' + (i + 1) + '</span>' +
+                    '<span class="import-preview-term">' + escapeHtml(c.q) + '</span>' +
+                    '<span class="import-preview-def">' + escapeHtml(c.a) + '</span></div>';
+            });
+            preview.innerHTML = html;
+            document.getElementById("quick-import-btn").disabled = false;
+            return;
+        }
+        // Smart parse found nothing — ask for API key for full AI
         document.getElementById("ai-key-row").classList.remove("hidden");
         document.getElementById("ai-key-hint").classList.remove("hidden");
+        alert("Smart parse couldn't find term(definition) patterns. For better results, enter a Gemini API key.");
+        document.getElementById("gemini-key-input").focus();
+        return;
+    }
+
+    // File upload without API key
+    if (!key && hasFile) {
+        document.getElementById("ai-key-row").classList.remove("hidden");
+        document.getElementById("ai-key-hint").classList.remove("hidden");
+        alert("A Gemini API key is needed to process uploaded files.");
         document.getElementById("gemini-key-input").focus();
         return;
     }
