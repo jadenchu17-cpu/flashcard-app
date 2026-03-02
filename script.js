@@ -1468,12 +1468,13 @@ async function aiSortImport() {
     btn.disabled = true;
 
     try {
-        const promptText = "You are a study assistant. Analyze the following content and identify ONLY the most important key terms, vocabulary, concepts, and ideas that a student would need to study. " +
-            "Do NOT turn every sentence or line into a flashcard. Be selective — pick only the terms that matter. " +
-            "For each term: if the content provides a definition or explanation, use that. If not, write a clear, accurate, concise definition yourself. " +
-            "Return ONLY a JSON array of objects with \"q\" (the term or concept) and \"a\" (the definition or explanation). " +
-            "Keep definitions concise but accurate (1-2 sentences max). " +
-            "Return valid JSON only, no markdown, no explanation." +
+        const promptText = "You are a study assistant making flashcards. Read the following content carefully. " +
+            "Pick ONLY the major key terms, names, events, or concepts — the ones a teacher would put on a test. " +
+            "AIM FOR 5-15 CARDS MAX, even if the content is long. Do NOT make a card for every sentence or detail. " +
+            "Be very selective. For example, from a paragraph about the Nanjing Massacre, make maybe 1-2 cards (e.g. 'Nanjing Massacre' and 'Rape of Nanking'), NOT a card for every fact. " +
+            "The 'q' should be a short term or name (not a full sentence). " +
+            "The 'a' should be a concise definition (1-2 sentences max). Use the definition from the content if given, otherwise write an accurate one. " +
+            "Return ONLY a JSON array of objects with \"q\" and \"a\" keys. No markdown, no explanation." +
             (text ? "\n\nContent:\n" + text : "");
 
         // Build parts array — text prompt + optional file
