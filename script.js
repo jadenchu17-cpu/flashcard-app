@@ -88,7 +88,7 @@ function saveDecks() { localStorage.setItem("fc-decks", JSON.stringify(decks)); 
 function loadDecks() {
     const saved = localStorage.getItem("fc-decks");
     if (saved) { decks = JSON.parse(saved); }
-    else { decks = JSON.parse(JSON.stringify(SAMPLE_DECKS)); saveDecks(); }
+    else { decks = {}; }
 }
 function saveStats() { localStorage.setItem("fc-stats", JSON.stringify(stats)); }
 function loadStats() {
