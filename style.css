@@ -484,9 +484,16 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .right-btn:hover { background-color: var(--correct-hover); }
 
 /* ========== SCORE ========== */
-.score { display: flex; gap: 30px; margin-bottom: 20px; font-size: 1.1rem; }
+.score { display: flex; gap: 30px; margin-bottom: 20px; font-size: 1.1rem; justify-content: center; }
 .score-right { color: var(--correct); }
 .score-wrong { color: var(--wrong); }
+
+/* ========== TRACKING TOGGLE ========== */
+.tracking-toggle-row { display: flex; justify-content: center; margin-bottom: 10px; }
+.tracking-toggle-btn { padding: 8px 18px; background: transparent; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
+.tracking-toggle-btn:hover { color: var(--text); border-color: var(--text); }
+.tracking-toggle-btn.active { color: var(--accent); border-color: var(--accent); }
+.tracking-controls { margin-bottom: 10px; }
 
 /* ========== ACTION BUTTONS ========== */
 .action-buttons { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
@@ -589,12 +596,17 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .delete-deck-btn:hover { background: var(--wrong) !important; color: #ffffff !important; }
 
 /* ========== MANAGE MODAL ========== */
-.manage-modal { max-width: 550px; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
-.card-list { flex-shrink: 1; overflow-y: auto; margin-bottom: 20px; max-height: 200px; }
-.card-list-item { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border); gap: 10px; }
+.manage-modal { max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+.manage-card-count { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
+.card-list { flex: 1; overflow-y: auto; margin-bottom: 15px; max-height: 300px; border: 1px solid var(--border); border-radius: 10px; }
+.card-list-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); gap: 10px; }
 .card-list-item:last-child { border-bottom: none; }
-.card-list-text { flex: 1; font-size: 0.85rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-list-num { font-size: 0.75rem; color: var(--text-muted); min-width: 20px; text-align: center; flex-shrink: 0; }
+.card-list-term { flex: 1; font-size: 0.82rem; color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-list-def { flex: 1; font-size: 0.82rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-list-divider { color: var(--border); flex-shrink: 0; }
 .card-list-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.card-list-text { flex: 1; font-size: 0.85rem; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card-list-actions button { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.75rem; transition: all 0.3s; }
 .edit-btn { background: var(--surface-2); color: var(--text); }
 .edit-btn:hover { background: var(--accent); color: #ffffff; }

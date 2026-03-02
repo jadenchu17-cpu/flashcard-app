@@ -48,7 +48,7 @@
                     <span class="study-deck-name" id="study-deck-name"></span>
                 </div>
 
-                <div class="stats-bar" id="stats-bar">
+                <div class="stats-bar hidden" id="stats-bar">
                     <div class="stat">
                         <span class="stat-value" id="streak">0</span>
                         <span class="stat-label">Day Streak</span>
@@ -260,29 +260,38 @@
 
                 <div class="controls" id="controls">
                     <button class="nav-btn" onclick="prevCard()">Previous</button>
-                    <button class="wrong-btn" onclick="markWrong()">Wrong</button>
-                    <button class="right-btn" onclick="markRight()">Correct</button>
+                    <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
                     <button class="nav-btn" onclick="nextCard()">Next</button>
                 </div>
 
-                <div class="score" id="score">
-                    <span class="score-right">Correct: <span id="right-count">0</span></span>
-                    <span class="score-wrong">Wrong: <span id="wrong-count">0</span></span>
+                <div id="tracking-section">
+                    <div class="tracking-toggle-row">
+                        <button class="tracking-toggle-btn" id="tracking-toggle-btn" onclick="toggleTracking()">
+                            <span id="tracking-toggle-icon">&#9744;</span> Track Correct / Wrong
+                        </button>
+                    </div>
+                    <div id="tracking-content" class="hidden">
+                        <div class="controls tracking-controls">
+                            <button class="wrong-btn" onclick="markWrong()">&#8592; Wrong</button>
+                            <button class="right-btn" onclick="markRight()">Correct &#8594;</button>
+                        </div>
+                        <div class="score" id="score">
+                            <span class="score-right">Correct: <span id="right-count">0</span></span>
+                            <span class="score-wrong">Wrong: <span id="wrong-count">0</span></span>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="action-buttons" id="action-buttons">
-                    <button class="shuffle-btn" onclick="shuffleDeck()">Shuffle</button>
                     <button class="learn-btn" onclick="startLearnMode()">Learn</button>
                     <button class="test-btn" onclick="openTestConfig()">Test</button>
                     <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
                     <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
                 </div>
 
-                <div class="keyboard-hints">
+                <div class="keyboard-hints" id="keyboard-hints">
                     <span>Space: Flip</span>
                     <span>Arrow Keys: Navigate</span>
-                    <span>C: Correct</span>
-                    <span>W: Wrong</span>
                 </div>
             </div>
         </div>
@@ -303,7 +312,7 @@
     <!-- Manage Deck Modal -->
     <div class="modal-overlay" id="manage-modal" onclick="closeModalOnOverlay(event, 'manage-modal')">
         <div class="modal manage-modal">
-            <h2>Manage: <span id="manage-deck-name"></span></h2>
+            <h2>Manage: <span id="manage-deck-name"></span> <span class="manage-card-count" id="manage-card-count">(0 cards)</span></h2>
             <div class="folder-assign">
                 <label>Folder:</label>
                 <select id="deck-folder-select" onchange="assignDeckFolder()">
@@ -311,7 +320,17 @@
                 </select>
                 <button class="folder-new-inline" onclick="createFolderFromManage()">+</button>
             </div>
-            <div class="card-list" id="card-list"></div>
+            <div class="add-card-form">
+                <h3 id="card-form-title">Add New Card</h3>
+                <textarea id="card-question" placeholder="Term / Question" rows="2"></textarea>
+                <button class="ai-define-btn" id="ai-define-btn" onclick="aiDefine()">AI Define</button>
+                <textarea id="card-answer" placeholder="Definition / Answer" rows="2"></textarea>
+                <input type="hidden" id="edit-card-index" value="-1" />
+                <div class="card-form-buttons">
+                    <button class="modal-cancel" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none">Cancel Edit</button>
+                    <button class="modal-confirm" onclick="saveCard()">Save Card</button>
+                </div>
+            </div>
             <div class="import-section">
                 <button class="import-toggle-btn" id="import-toggle-btn" onclick="toggleImport()">Paste / Import List</button>
                 <div class="import-area hidden" id="import-area">
@@ -322,17 +341,7 @@
                     </div>
                 </div>
             </div>
-            <div class="add-card-form">
-                <h3 id="card-form-title">Add New Card</h3>
-                <textarea id="card-question" placeholder="Question / Front" rows="2"></textarea>
-                <button class="ai-define-btn" id="ai-define-btn" onclick="aiDefine()">AI Define</button>
-                <textarea id="card-answer" placeholder="Answer / Back" rows="2"></textarea>
-                <input type="hidden" id="edit-card-index" value="-1" />
-                <div class="card-form-buttons">
-                    <button class="modal-cancel" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none">Cancel Edit</button>
-                    <button class="modal-confirm" onclick="saveCard()">Save Card</button>
-                </div>
-            </div>
+            <div class="card-list" id="card-list"></div>
             <div class="modal-buttons">
                 <button class="modal-cancel delete-deck-btn" onclick="deleteDeck()">Delete Deck</button>
                 <button class="modal-confirm" onclick="closeModal('manage-modal')">Done</button>

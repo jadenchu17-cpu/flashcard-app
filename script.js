@@ -61,6 +61,7 @@ let isFlipped = false;
 let rightCount = 0;
 let wrongCount = 0;
 let wrongCards = [];
+let reviewWrongCards = []; // cards wrong during current review round
 let reviewMode = false;
 let stats = { streak: 0, bestStreak: 0, lastStudyDate: null };
 let deckFolders = {};       // { "Korean": "Languages", ... }
@@ -73,6 +74,7 @@ let sidebarOpen = false;
 let deckMarkedCards = {};    // { "APUSH": Set([0,1,3]), ... } tracks marked cards per deck
 let draggedDeckName = null;  // for drag-and-drop
 let editingFolder = null;    // folder name being edited
+let trackingEnabled = false; // whether correct/wrong tracking is toggled on
 
 // ========== LOCAL STORAGE ==========
 function saveDecks() { localStorage.setItem("fc-decks", JSON.stringify(decks)); }
@@ -386,7 +388,7 @@ function switchDeck(name) {
     if (!decks[name]) return;
     exitLearnMode(); exitTestMode();
     currentDeckName = name; currentCards = decks[name]; currentIndex = 0;
-    isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewMode = false;
+    isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewWrongCards = []; reviewMode = false;
     // Restore (or create) the per-deck marked set
     if (!deckMarkedCards[name]) deckMarkedCards[name] = new Set();
     document.getElementById("right-count").textContent = 0;
@@ -394,6 +396,9 @@ function switchDeck(name) {
     document.getElementById("review-label").style.display = "none";
     document.getElementById("review-btn").classList.remove("active");
     updateReviewButton(); renderSidebar(); showStudyView(); updateCard(); renderStats();
+    // Respect tracking toggle state
+    document.getElementById("tracking-content").classList.toggle("hidden", !trackingEnabled);
+    document.getElementById("stats-bar").classList.toggle("hidden", !trackingEnabled);
 }
 
 function createDeck() {
@@ -421,13 +426,23 @@ function openManageModal() {
     populateFolderSelect(); renderCardList(); cancelEdit(); openModal("manage-modal");
 }
 
+function updateManageCardCount() {
+    const cards = decks[currentDeckName];
+    document.getElementById("manage-card-count").textContent = "(" + cards.length + " card" + (cards.length !== 1 ? "s" : "") + ")";
+}
+
 function renderCardList() {
     const container = document.getElementById("card-list");
     const cards = decks[currentDeckName];
-    if (cards.length === 0) { container.innerHTML = '<p class="empty-message">No cards yet. Add some below!</p>'; return; }
+    updateManageCardCount();
+    if (cards.length === 0) { container.innerHTML = '<p class="empty-message">No cards yet. Add some above!</p>'; return; }
     container.innerHTML = cards.map((card, i) =>
-        '<div class="card-list-item"><span class="card-list-text">' + (i + 1) + ". " + escapeHtml(card.q) +
-        '</span><div class="card-list-actions"><button class="edit-btn" onclick="editCard(' + i +
+        '<div class="card-list-item">' +
+        '<span class="card-list-num">' + (i + 1) + '</span>' +
+        '<span class="card-list-term">' + escapeHtml(card.q) + '</span>' +
+        '<span class="card-list-divider">|</span>' +
+        '<span class="card-list-def">' + escapeHtml(card.a) + '</span>' +
+        '<div class="card-list-actions"><button class="edit-btn" onclick="editCard(' + i +
         ')">Edit</button><button class="delete-btn" onclick="deleteCard(' + i + ')">Delete</button></div></div>'
     ).join("");
 }
@@ -502,23 +517,46 @@ function prevCard() { if (currentCards.length === 0) return; if (currentIndex > 
 function markRight() {
     if (currentCards.length === 0) return;
     const marked = deckMarkedCards[currentDeckName];
-    if (marked && marked.has(currentIndex)) return; // already marked this card
+    if (marked && marked.has(currentIndex)) return;
     if (marked) marked.add(currentIndex);
     rightCount++; document.getElementById("right-count").textContent = rightCount;
     recordStudy(true);
-    nextCard();
+    if (currentIndex < currentCards.length - 1) { currentIndex++; updateCard(); }
+    else checkReviewComplete();
 }
 function markWrong() {
     if (currentCards.length === 0) return;
     const marked = deckMarkedCards[currentDeckName];
-    if (marked && marked.has(currentIndex)) return; // already marked this card
+    if (marked && marked.has(currentIndex)) return;
     if (marked) marked.add(currentIndex);
     wrongCount++;
     document.getElementById("wrong-count").textContent = wrongCount;
     const card = currentCards[currentIndex];
+    if (!reviewWrongCards.some((c) => c.q === card.q && c.a === card.a)) reviewWrongCards.push(card);
     if (!wrongCards.some((c) => c.q === card.q && c.a === card.a)) wrongCards.push(card);
     updateReviewButton(); recordStudy(false);
-    nextCard();
+    if (currentIndex < currentCards.length - 1) { currentIndex++; updateCard(); }
+    else checkReviewComplete();
+}
+
+function checkReviewComplete() {
+    if (!reviewMode) return;
+    // All cards in this review round have been answered
+    if (reviewWrongCards.length === 0) {
+        // Got them all right — exit review, clear wrong cards
+        wrongCards = [];
+        reviewMode = false;
+        currentCards = decks[currentDeckName]; currentIndex = 0;
+        deckMarkedCards[currentDeckName] = new Set();
+        document.getElementById("review-label").style.display = "none";
+        document.getElementById("review-btn").classList.remove("active");
+        updateReviewButton(); updateCard();
+        alert("You got all the review cards correct! Review cleared.");
+    } else {
+        // Still got some wrong — update wrongCards to only the ones still wrong, stay in review
+        wrongCards = [...reviewWrongCards];
+        updateReviewButton();
+    }
 }
 
 function shuffleDeck() {
@@ -534,7 +572,11 @@ function toggleReviewMode() {
         document.getElementById("review-label").style.display = "none";
         document.getElementById("review-btn").classList.remove("active"); updateCard();
     } else { if (wrongCards.length === 0) return; reviewMode = true; currentCards = [...wrongCards]; currentIndex = 0;
+        reviewWrongCards = []; // reset the review-round wrong tracker
         deckMarkedCards[currentDeckName] = new Set();
+        rightCount = 0; wrongCount = 0;
+        document.getElementById("right-count").textContent = 0;
+        document.getElementById("wrong-count").textContent = 0;
         document.getElementById("review-label").style.display = "inline";
         document.getElementById("review-btn").classList.add("active"); updateCard(); }
 }
@@ -598,6 +640,26 @@ function resetDeckStats() {
     currentIndex = 0;
     updateCard();
     renderStats();
+}
+
+// ========== TRACKING TOGGLE ==========
+function toggleTracking() {
+    trackingEnabled = !trackingEnabled;
+    const btn = document.getElementById("tracking-toggle-btn");
+    const content = document.getElementById("tracking-content");
+    const statsBar = document.getElementById("stats-bar");
+    const hints = document.getElementById("keyboard-hints");
+    btn.classList.toggle("active", trackingEnabled);
+    document.getElementById("tracking-toggle-icon").innerHTML = trackingEnabled ? "&#9745;" : "&#9744;";
+    if (trackingEnabled) {
+        content.classList.remove("hidden");
+        statsBar.classList.remove("hidden");
+        hints.innerHTML = '<span>Space: Flip</span><span>&#8592;: Wrong</span><span>&#8594;: Correct</span>';
+    } else {
+        content.classList.add("hidden");
+        statsBar.classList.add("hidden");
+        hints.innerHTML = '<span>Space: Flip</span><span>Arrow Keys: Navigate</span>';
+    }
 }
 
 // ========== LEARN MODE ==========
@@ -1262,10 +1324,14 @@ document.addEventListener("keydown", (e) => {
 
     switch (e.key) {
         case " ": e.preventDefault(); flipCard(); break;
-        case "ArrowRight": nextCard(); break;
-        case "ArrowLeft": prevCard(); break;
-        case "c": case "C": markRight(); break;
-        case "w": case "W": markWrong(); break;
+        case "ArrowRight":
+            if (trackingEnabled) markRight();
+            else nextCard();
+            break;
+        case "ArrowLeft":
+            if (trackingEnabled) markWrong();
+            else prevCard();
+            break;
     }
 });
 
