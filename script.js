@@ -455,6 +455,8 @@ function saveCard() {
     if (editIndex >= 0) decks[currentDeckName][editIndex] = { q, a };
     else decks[currentDeckName].push({ q, a });
     saveDecks(); cancelEdit(); renderCardList(); renderSidebar(); renderHomeGrid();
+    const manageModal = document.querySelector(".manage-modal");
+    if (manageModal) setTimeout(() => manageModal.scrollTop = manageModal.scrollHeight, 50);
     if (!reviewMode) { currentCards = decks[currentDeckName];
         if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
         updateCard(); renderStats(); }

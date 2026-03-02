@@ -596,9 +596,9 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .delete-deck-btn:hover { background: var(--wrong) !important; color: #ffffff !important; }
 
 /* ========== MANAGE MODAL ========== */
-.manage-modal { max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow-y: auto; }
+.manage-modal { max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 15px; }
 .manage-card-count { font-size: 0.8rem; color: var(--text-muted); font-weight: 400; }
-.card-list { flex: 1; overflow-y: auto; margin-bottom: 15px; max-height: 300px; border: 1px solid var(--border); border-radius: 10px; }
+.card-list { margin-bottom: 15px; border: 1px solid var(--border); border-radius: 10px; flex-shrink: 0; }
 .card-list-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); gap: 10px; }
 .card-list-item:last-child { border-bottom: none; }
 .card-list-num { font-size: 0.75rem; color: var(--text-muted); min-width: 20px; text-align: center; flex-shrink: 0; }
