@@ -48,16 +48,16 @@
                     <span class="study-deck-name" id="study-deck-name"></span>
                 </div>
 
+                <div class="action-buttons" id="action-buttons">
+                    <button class="learn-btn" onclick="startLearnMode()">Learn</button>
+                    <button class="test-btn" onclick="openTestConfig()">Test</button>
+                    <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
+                    <button class="manage-btn" onclick="openEditor('edit', currentDeckName)">Edit Set</button>
+                </div>
+
                 <div class="stats-bar hidden" id="stats-bar">
-                    <div class="stat">
-                        <span class="stat-value" id="accuracy">0%</span>
-                        <span class="stat-label">Accuracy</span>
-                    </div>
-                    <div class="stat">
-                        <span class="stat-value" id="best-streak">0</span>
-                        <span class="stat-label">Best Streak</span>
-                    </div>
-                    <button class="stat-reset-btn" onclick="resetDeckStats()" title="Reset set stats">&#8635;</button>
+                    <span class="score-right">Correct: <span id="right-count">0</span> / <span id="track-total">0</span></span>
+                    <span class="score-wrong">Wrong: <span id="wrong-count">0</span> / <span id="track-total2">0</span></span>
                 </div>
 
                 <div class="progress" id="progress-bar">
@@ -269,18 +269,7 @@
                             <button class="wrong-btn" onclick="markWrong()">&#8592; Wrong</button>
                             <button class="right-btn" onclick="markRight()">Correct &#8594;</button>
                         </div>
-                        <div class="score" id="score">
-                            <span class="score-right">Correct: <span id="right-count">0</span> / <span id="track-total">0</span></span>
-                            <span class="score-wrong">Wrong: <span id="wrong-count">0</span> / <span id="track-total2">0</span></span>
-                        </div>
                     </div>
-                </div>
-
-                <div class="action-buttons" id="action-buttons">
-                    <button class="learn-btn" onclick="startLearnMode()">Learn</button>
-                    <button class="test-btn" onclick="openTestConfig()">Test</button>
-                    <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
-                    <button class="manage-btn" onclick="openEditor('edit', currentDeckName)">Edit Set</button>
                 </div>
 
                 <div class="keyboard-hints" id="keyboard-hints">

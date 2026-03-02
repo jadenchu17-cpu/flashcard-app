@@ -654,15 +654,7 @@ function recordStudy(correct) {
 }
 
 function renderStats() {
-    document.getElementById("best-streak").textContent = stats.bestStreak;
-
-    if (currentDeckName) {
-        const ds = getDeckStat(currentDeckName);
-        document.getElementById("accuracy").textContent = ds.studied > 0
-            ? Math.round((ds.correct / ds.studied) * 100) + "%" : "0%";
-    } else {
-        document.getElementById("accuracy").textContent = "0%";
-    }
+    // Stats bar now only shows Correct / Wrong counts (handled by tracking code)
 }
 
 function resetDeckStats() {
