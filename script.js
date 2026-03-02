@@ -1387,27 +1387,33 @@ async function aiSortImport() {
             "If it's unstructured notes, identify the key terms and create definitions from the surrounding context. " +
             "Return valid JSON only, no markdown, no explanation.\n\nText:\n" + text;
 
-        const response = await fetch(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + key,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { temperature: 0.2 }
-                })
-            }
-        );
+        const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+        let response = null;
+        for (const model of models) {
+            response = await fetch(
+                "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: { temperature: 0.2 }
+                    })
+                }
+            );
+            if (response.ok) break;
+        }
 
         if (!response.ok) {
-            const err = await response.json();
-            if (response.status === 400 || response.status === 403) {
+            const err = await response.json().catch(() => ({}));
+            const msg = err.error?.message || response.statusText;
+            if (response.status === 400 || response.status === 403 || msg.includes("API_KEY")) {
                 localStorage.removeItem("fc-gemini-key");
-                alert("Invalid API key. Please enter a valid Gemini API key.");
+                alert("API key error: " + msg + "\n\nPlease enter a valid Gemini API key.");
                 document.getElementById("ai-key-row").classList.remove("hidden");
                 document.getElementById("ai-key-hint").classList.remove("hidden");
             } else {
-                alert("API error: " + (err.error?.message || response.statusText));
+                alert("API error (" + response.status + "): " + msg);
             }
             return;
         }
