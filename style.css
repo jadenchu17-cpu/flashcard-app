@@ -679,6 +679,256 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .test-breakdown-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
 .test-breakdown-row:last-child { border-bottom: none; }
 
+/* ========== SET EDITOR ========== */
+#editor-view {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+}
+.editor-title {
+    font-size: 1.3rem;
+    color: var(--accent);
+    font-weight: 700;
+}
+.editor-save-btn {
+    padding: 10px 24px;
+    font-size: 0.95rem;
+}
+.editor-form {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.editor-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+.editor-input, .editor-textarea, .editor-select {
+    width: 100%;
+    padding: 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+    font-family: inherit;
+}
+.editor-textarea { resize: vertical; }
+.editor-input:focus, .editor-textarea:focus, .editor-select:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+.editor-folder-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.editor-folder-row .editor-select { flex: 1; }
+.editor-import-row {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+}
+.editor-cards {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.editor-card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    transition: border-color 0.2s;
+}
+.editor-card-row:hover {
+    border-color: var(--accent);
+}
+.editor-card-row.dragging {
+    opacity: 0.4;
+}
+.editor-card-row.drag-over {
+    border-color: var(--correct);
+    background: rgba(39, 174, 96, 0.05);
+}
+.editor-card-num {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    min-width: 24px;
+    padding-top: 10px;
+    text-align: center;
+}
+.editor-card-drag {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    padding: 8px 2px;
+    user-select: none;
+    transition: color 0.2s;
+}
+.editor-card-drag:hover { color: var(--text); }
+.editor-card-drag:active { cursor: grabbing; }
+.editor-card-fields {
+    flex: 1;
+    display: flex;
+    gap: 12px;
+}
+.editor-card-term, .editor-card-def {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.editor-card-term textarea, .editor-card-def textarea {
+    width: 100%;
+    padding: 10px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+}
+.editor-card-term textarea:focus, .editor-card-def textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+.editor-card-field-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.editor-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 6px;
+}
+.editor-card-delete {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+.editor-card-delete:hover {
+    color: var(--wrong);
+    border-color: var(--wrong);
+    background: rgba(192, 57, 43, 0.1);
+}
+.editor-img-btn {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    width: fit-content;
+}
+.editor-img-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.editor-img-preview {
+    max-width: 100%;
+    max-height: 80px;
+    border-radius: 6px;
+    margin-top: 6px;
+    object-fit: contain;
+}
+.editor-img-remove {
+    font-size: 0.7rem;
+    color: var(--wrong);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 2px 6px;
+}
+.editor-add-row {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 20px;
+}
+.editor-add-card-btn {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    color: var(--accent);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.editor-add-card-btn:hover {
+    background: rgba(233, 69, 96, 0.1);
+}
+.editor-bottom-actions {
+    width: 100%;
+    max-width: 800px;
+    margin-bottom: 40px;
+}
+.card-back-img {
+    max-width: 80%;
+    max-height: 120px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+.card-back {
+    flex-direction: column;
+}
+.home-deck-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ========== UTILITY ========== */
 .hidden { display: none !important; }
 
@@ -708,4 +958,6 @@ h1 { font-size: 1.8rem; color: var(--accent); }
     .learn-question-card { padding: 20px; font-size: 1rem; }
     .mc-option { padding: 12px 16px; font-size: 0.85rem; }
     .home-deck-grid { grid-template-columns: 1fr; }
+    .editor-card-fields { flex-direction: column; }
+    .editor-header { flex-wrap: wrap; gap: 10px; }
 }

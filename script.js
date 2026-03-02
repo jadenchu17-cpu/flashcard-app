@@ -76,6 +76,13 @@ let draggedDeckName = null;  // for drag-and-drop
 let editingFolder = null;    // folder name being edited
 let trackingEnabled = false; // whether correct/wrong tracking is toggled on
 
+// Editor state
+let editorMode = null;           // null, "create", or "edit"
+let editorOriginalName = null;   // when editing, stores the original deck name
+let editorCardRows = [];         // array of { q, a, img } for the editor
+let editorDragIdx = null;        // for drag-reorder of card rows
+let deckDescriptions = {};       // { "APUSH": "AP US History flashcards", ... }
+
 // ========== LOCAL STORAGE ==========
 function saveDecks() { localStorage.setItem("fc-decks", JSON.stringify(decks)); }
 function loadDecks() {
@@ -105,6 +112,11 @@ function saveFolderColors() { localStorage.setItem("fc-folder-colors", JSON.stri
 function loadFolderColors() {
     const saved = localStorage.getItem("fc-folder-colors");
     if (saved) folderColors = JSON.parse(saved);
+}
+function saveDeckDescs() { localStorage.setItem("fc-deck-descs", JSON.stringify(deckDescriptions)); }
+function loadDeckDescs() {
+    const saved = localStorage.getItem("fc-deck-descs");
+    if (saved) deckDescriptions = JSON.parse(saved);
 }
 function getTodayDate() { return new Date().toISOString().split("T")[0]; }
 function getYesterdayDate() { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().split("T")[0]; }
@@ -345,8 +357,10 @@ function renderHomeGrid() {
         card.onclick = () => { switchDeck(name); closeSidebar(); };
         const folder = deckFolders[name];
         const color = folder ? getFolderColor(folder) : null;
+        const desc = deckDescriptions[name];
         card.innerHTML =
             '<span class="home-deck-card-name">' + escapeHtml(name) + '</span>' +
+            (desc ? '<span class="home-deck-card-desc">' + escapeHtml(desc).substring(0, 60) + '</span>' : '') +
             '<div class="home-deck-card-info">' +
             '<span class="home-deck-card-count">' + decks[name].length + ' card' + (decks[name].length !== 1 ? 's' : '') + '</span>' +
             (folder ? '<span class="home-deck-card-folder" style="background:' + color + '22; color:' + color + '">' + escapeHtml(folder) + '</span>' : '') +
@@ -356,8 +370,8 @@ function renderHomeGrid() {
 
     const newCard = document.createElement("div");
     newCard.className = "home-new-deck-card";
-    newCard.textContent = "+ New Deck";
-    newCard.onclick = () => openModal("create-deck-modal");
+    newCard.textContent = "+ New Set";
+    newCard.onclick = () => openEditor("create");
     container.appendChild(newCard);
 }
 
@@ -367,6 +381,7 @@ function showHomeView() {
     currentCards = [];
     document.getElementById("home-view").classList.remove("hidden");
     document.getElementById("study-view").classList.add("hidden");
+    document.getElementById("editor-view").classList.add("hidden");
     renderSidebar();
     renderHomeGrid();
 }
@@ -374,6 +389,7 @@ function showHomeView() {
 function showStudyView() {
     document.getElementById("home-view").classList.add("hidden");
     document.getElementById("study-view").classList.remove("hidden");
+    document.getElementById("editor-view").classList.add("hidden");
     document.getElementById("study-deck-name").textContent = currentDeckName;
 }
 
@@ -415,7 +431,7 @@ function createDeck() {
     const input = document.getElementById("new-deck-name");
     const name = input.value.trim();
     if (!name) return;
-    if (decks[name]) { alert("A deck with this name already exists!"); return; }
+    if (decks[name]) { alert("A set with this name already exists!"); return; }
     decks[name] = []; saveDecks();
     input.value = ""; closeModal("create-deck-modal"); switchDeck(name); openManageModal();
 }
@@ -495,8 +511,8 @@ function deleteCard(index) {
     if (!reviewMode) {
         if (currentIndex >= currentCards.length) currentIndex = Math.max(0, currentCards.length - 1);
         if (currentCards.length > 0) updateCard();
-        else { document.getElementById("question").textContent = "No cards in this deck";
-            document.getElementById("answer").textContent = "Add cards via Manage Deck";
+        else { document.getElementById("question").textContent = "No cards in this set";
+            document.getElementById("answer").textContent = "Add cards via Edit Set";
             document.getElementById("total-cards").textContent = "0";
             document.getElementById("current-card").textContent = "0"; }
         renderStats();
@@ -509,16 +525,21 @@ function escapeHtml(text) { const div = document.createElement("div"); div.textC
 function flipCard() { if (currentCards.length === 0) return; isFlipped = !isFlipped; document.getElementById("flashcard").classList.toggle("flipped"); }
 
 function updateCard() {
+    const imgEl = document.getElementById("answer-img");
     if (currentCards.length === 0) {
-        document.getElementById("question").textContent = "No cards in this deck";
-        document.getElementById("answer").textContent = "Add cards via Manage Deck";
+        document.getElementById("question").textContent = "No cards in this set";
+        document.getElementById("answer").textContent = "Add cards via Edit Set";
         document.getElementById("total-cards").textContent = "0";
-        document.getElementById("current-card").textContent = "0"; return;
+        document.getElementById("current-card").textContent = "0";
+        imgEl.classList.add("hidden"); imgEl.src = "";
+        return;
     }
     const card = currentCards[currentIndex];
     isFlipped = false; document.getElementById("flashcard").classList.remove("flipped");
     document.getElementById("question").textContent = card.q;
     document.getElementById("answer").textContent = card.a;
+    if (card.img) { imgEl.src = card.img; imgEl.classList.remove("hidden"); }
+    else { imgEl.src = ""; imgEl.classList.add("hidden"); }
     document.getElementById("current-card").textContent = currentIndex + 1;
     document.getElementById("total-cards").textContent = currentCards.length;
     updateTrackTotal();
@@ -682,7 +703,7 @@ function toggleTracking() {
 // ========== LEARN MODE ==========
 function startLearnMode() {
     if (!currentDeckName || currentCards.length < 2) {
-        alert("Need at least 2 cards in the deck to start Learn Mode."); return;
+        alert("Need at least 2 cards in the set to start Learn Mode."); return;
     }
     learnActive = true;
     learnState = {
@@ -882,6 +903,9 @@ function showLearnFeedback(isCorrect) {
     document.getElementById("feedback-correct-label").style.display = isCorrect ? "none" : "block";
     document.getElementById("feedback-answer").style.display = isCorrect ? "none" : "block";
     document.getElementById("feedback-answer").textContent = learnState.current.a;
+    const fbImg = document.getElementById("feedback-answer-img");
+    if (!isCorrect && learnState.current.img) { fbImg.src = learnState.current.img; fbImg.classList.remove("hidden"); }
+    else { fbImg.src = ""; fbImg.classList.add("hidden"); }
     updateLearnProgress();
 }
 
@@ -951,6 +975,294 @@ function importCards() {
     renderCardList(); renderSidebar(); renderHomeGrid();
     if (!reviewMode) { currentCards = decks[currentDeckName]; updateCard(); renderStats(); }
     alert("Imported " + cards.length + " cards!");
+}
+
+// ========== SET EDITOR ==========
+function openEditor(mode, deckName) {
+    editorMode = mode;
+    editorOriginalName = (mode === "edit") ? deckName : null;
+
+    document.getElementById("home-view").classList.add("hidden");
+    document.getElementById("study-view").classList.add("hidden");
+    document.getElementById("editor-view").classList.remove("hidden");
+
+    document.getElementById("editor-title-heading").textContent =
+        (mode === "create") ? "Create new set" : "Edit set";
+
+    if (mode === "edit" && deckName && decks[deckName]) {
+        document.getElementById("editor-title").value = deckName;
+        document.getElementById("editor-desc").value = deckDescriptions[deckName] || "";
+        editorCardRows = decks[deckName].map(c => ({ q: c.q, a: c.a, img: c.img || null }));
+        if (editorCardRows.length === 0) editorCardRows = [{ q: "", a: "", img: null }];
+        document.getElementById("editor-delete-btn").style.display = "inline-block";
+    } else {
+        document.getElementById("editor-title").value = "";
+        document.getElementById("editor-desc").value = "";
+        editorCardRows = [{ q: "", a: "", img: null }, { q: "", a: "", img: null }];
+        document.getElementById("editor-delete-btn").style.display = "none";
+    }
+
+    populateEditorFolderSelect();
+    renderEditorCards();
+    document.getElementById("editor-import-area").classList.add("hidden");
+    document.getElementById("editor-import-text").value = "";
+    document.getElementById("editor-import-preview").textContent = "0 cards detected";
+    window.scrollTo(0, 0);
+}
+
+function closeEditor() {
+    document.getElementById("editor-view").classList.add("hidden");
+    editorMode = null;
+    if (currentDeckName && decks[currentDeckName]) {
+        showStudyView();
+    } else {
+        showHomeView();
+    }
+}
+
+function saveSet() {
+    const name = document.getElementById("editor-title").value.trim();
+    if (!name) { alert("Please enter a title for your set."); return; }
+
+    syncEditorCardRows();
+    const validCards = editorCardRows.filter(c => c.q.trim() || c.a.trim());
+
+    if (editorMode === "create" && decks[name]) {
+        alert("A set with this name already exists!"); return;
+    }
+    if (editorMode === "edit" && name !== editorOriginalName && decks[name]) {
+        alert("A set with this name already exists!"); return;
+    }
+
+    // Handle rename
+    if (editorMode === "edit" && name !== editorOriginalName) {
+        if (deckFolders[editorOriginalName]) {
+            deckFolders[name] = deckFolders[editorOriginalName];
+            delete deckFolders[editorOriginalName];
+        }
+        if (deckStats[editorOriginalName]) {
+            deckStats[name] = deckStats[editorOriginalName];
+            delete deckStats[editorOriginalName];
+        }
+        if (deckDescriptions[editorOriginalName]) {
+            deckDescriptions[name] = deckDescriptions[editorOriginalName];
+            delete deckDescriptions[editorOriginalName];
+        }
+        delete decks[editorOriginalName];
+    }
+
+    // Save description
+    const desc = document.getElementById("editor-desc").value.trim();
+    if (desc) deckDescriptions[name] = desc;
+    else delete deckDescriptions[name];
+
+    // Save folder
+    const folder = document.getElementById("editor-folder-select").value;
+    if (folder) deckFolders[name] = folder;
+    else delete deckFolders[name];
+
+    // Save cards
+    decks[name] = validCards.map(c => {
+        const card = { q: c.q.trim(), a: c.a.trim() };
+        if (c.img) card.img = c.img;
+        return card;
+    });
+
+    saveDecks(); saveFolders(); saveDeckStats(); saveDeckDescs();
+    editorMode = null;
+    switchDeck(name);
+}
+
+function syncEditorCardRows() {
+    const container = document.getElementById("editor-cards");
+    const rows = container.querySelectorAll(".editor-card-row");
+    rows.forEach((row, i) => {
+        if (editorCardRows[i]) {
+            editorCardRows[i].q = row.querySelector(".term-input").value;
+            editorCardRows[i].a = row.querySelector(".def-input").value;
+        }
+    });
+}
+
+function renderEditorCards() {
+    const container = document.getElementById("editor-cards");
+    container.innerHTML = "";
+    editorCardRows.forEach((card, i) => {
+        const row = document.createElement("div");
+        row.className = "editor-card-row";
+        row.draggable = true;
+        row.dataset.index = i;
+
+        row.ondragstart = (e) => {
+            editorDragIdx = i;
+            row.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+        };
+        row.ondragend = () => { editorDragIdx = null; row.classList.remove("dragging"); };
+        row.ondragover = (e) => { e.preventDefault(); row.classList.add("drag-over"); };
+        row.ondragleave = () => row.classList.remove("drag-over");
+        row.ondrop = (e) => {
+            e.preventDefault();
+            row.classList.remove("drag-over");
+            if (editorDragIdx !== null && editorDragIdx !== i) {
+                syncEditorCardRows();
+                const moved = editorCardRows.splice(editorDragIdx, 1)[0];
+                editorCardRows.splice(i, 0, moved);
+                renderEditorCards();
+            }
+        };
+
+        let imgHtml = "";
+        if (card.img) {
+            imgHtml = '<img src="' + card.img + '" class="editor-img-preview" />' +
+                '<button class="editor-img-remove" onclick="removeEditorImage(' + i + ')">Remove image</button>';
+        }
+
+        row.innerHTML =
+            '<span class="editor-card-drag" title="Drag to reorder">&#9776;</span>' +
+            '<span class="editor-card-num">' + (i + 1) + '</span>' +
+            '<div class="editor-card-fields">' +
+                '<div class="editor-card-term">' +
+                    '<textarea class="term-input" placeholder="Enter term" rows="2">' + escapeHtml(card.q) + '</textarea>' +
+                    '<span class="editor-card-field-label">TERM</span>' +
+                '</div>' +
+                '<div class="editor-card-def">' +
+                    '<textarea class="def-input" placeholder="Enter definition" rows="2">' + escapeHtml(card.a) + '</textarea>' +
+                    '<span class="editor-card-field-label">DEFINITION</span>' +
+                    '<button class="editor-img-btn" onclick="pickEditorImage(' + i + ')">&#128247; Image</button>' +
+                    imgHtml +
+                '</div>' +
+            '</div>' +
+            '<div class="editor-card-actions">' +
+                '<button class="editor-card-delete" onclick="deleteEditorCardRow(' + i + ')" title="Delete card">&#10005;</button>' +
+            '</div>';
+
+        container.appendChild(row);
+    });
+}
+
+function addEditorCardRow() {
+    syncEditorCardRows();
+    editorCardRows.push({ q: "", a: "", img: null });
+    renderEditorCards();
+    const container = document.getElementById("editor-cards");
+    const lastRow = container.lastElementChild;
+    if (lastRow) {
+        lastRow.scrollIntoView({ behavior: "smooth" });
+        setTimeout(() => { const inp = lastRow.querySelector(".term-input"); if (inp) inp.focus(); }, 100);
+    }
+}
+
+function deleteEditorCardRow(index) {
+    syncEditorCardRows();
+    if (editorCardRows.length <= 1) { alert("You need at least one card."); return; }
+    editorCardRows.splice(index, 1);
+    renderEditorCards();
+}
+
+function deleteSetFromEditor() {
+    if (!editorOriginalName) return;
+    if (!confirm('Delete "' + editorOriginalName + '" and all its cards?')) return;
+    delete deckFolders[editorOriginalName]; saveFolders();
+    delete deckStats[editorOriginalName]; saveDeckStats();
+    delete deckDescriptions[editorOriginalName]; saveDeckDescs();
+    delete decks[editorOriginalName]; saveDecks();
+    currentDeckName = null;
+    editorMode = null;
+    document.getElementById("editor-view").classList.add("hidden");
+    showHomeView();
+}
+
+// Image support
+function compressImage(dataUrl, maxWidth, quality, callback) {
+    const img = new Image();
+    img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        if (w > maxWidth) { h = (maxWidth / w) * h; w = maxWidth; }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.src = dataUrl;
+}
+
+function pickEditorImage(index) {
+    syncEditorCardRows();
+    const input = document.getElementById("editor-file-input");
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            alert("Image is too large (max 5MB). Please use a smaller image."); return;
+        }
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            compressImage(ev.target.result, 400, 0.7, (compressed) => {
+                editorCardRows[index].img = compressed;
+                renderEditorCards();
+            });
+        };
+        reader.readAsDataURL(file);
+        input.value = "";
+    };
+    input.click();
+}
+
+function removeEditorImage(index) {
+    syncEditorCardRows();
+    editorCardRows[index].img = null;
+    renderEditorCards();
+}
+
+// Editor folder support
+function populateEditorFolderSelect() {
+    const select = document.getElementById("editor-folder-select");
+    const cur = editorOriginalName ? (deckFolders[editorOriginalName] || "") : "";
+    const names = getFolderNames();
+    select.innerHTML = '<option value="">None</option>';
+    names.forEach((name) => {
+        const opt = document.createElement("option");
+        opt.value = name; opt.textContent = name;
+        if (name === cur) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
+
+function createFolderFromEditor() {
+    const name = prompt("New folder name:");
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (!folderColors[trimmed]) folderColors[trimmed] = FOLDER_COLORS[getFolderNames().length % FOLDER_COLORS.length];
+    saveFolderColors();
+    populateEditorFolderSelect();
+    document.getElementById("editor-folder-select").value = trimmed;
+}
+
+// Editor import
+function toggleEditorImport() {
+    const area = document.getElementById("editor-import-area");
+    area.classList.toggle("hidden");
+    if (!area.classList.contains("hidden")) document.getElementById("editor-import-text").focus();
+}
+
+function onEditorImportInput() {
+    const cards = parseImportText(document.getElementById("editor-import-text").value);
+    document.getElementById("editor-import-preview").textContent =
+        cards.length + " card" + (cards.length !== 1 ? "s" : "") + " detected";
+}
+
+function editorImportCards() {
+    const cards = parseImportText(document.getElementById("editor-import-text").value);
+    if (cards.length === 0) { alert("No cards detected. Check format."); return; }
+    syncEditorCardRows();
+    for (const card of cards) {
+        editorCardRows.push({ q: card.q, a: card.a, img: null });
+    }
+    document.getElementById("editor-import-text").value = "";
+    document.getElementById("editor-import-preview").textContent = "0 cards detected";
+    document.getElementById("editor-import-area").classList.add("hidden");
+    renderEditorCards();
 }
 
 // ========== AI DEFINITIONS (no API key needed) ==========
@@ -1358,7 +1670,7 @@ document.addEventListener("keydown", (e) => {
 
 // ========== INIT ==========
 function init() {
-    applyTheme(); loadDecks(); loadFolders(); loadFolderColors(); loadStats(); loadDeckStats(); renderStats();
+    applyTheme(); loadDecks(); loadFolders(); loadFolderColors(); loadStats(); loadDeckStats(); loadDeckDescs(); renderStats();
     renderSidebar(); renderHomeGrid();
 
     // Add sidebar overlay for mobile

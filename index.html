@@ -12,12 +12,12 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <button class="home-btn" onclick="showHomeView(); closeSidebar();" title="Home">&#127968;</button>
-                <h2 class="sidebar-title">Decks</h2>
+                <h2 class="sidebar-title">Sets</h2>
                 <button class="sidebar-close" id="sidebar-close" onclick="toggleSidebar()">&#10005;</button>
             </div>
             <div class="sidebar-content" id="sidebar-content"></div>
             <div class="sidebar-actions">
-                <button class="sidebar-create-btn" onclick="openModal('create-deck-modal')">+ Deck</button>
+                <button class="sidebar-create-btn" onclick="openEditor('create')">+ Set</button>
                 <button class="sidebar-create-btn folder-create-btn" onclick="createNewFolder()">+ Folder</button>
             </div>
         </aside>
@@ -35,8 +35,8 @@
             <!-- Home View -->
             <div id="home-view">
                 <div class="home-welcome">
-                    <h2>Your Decks</h2>
-                    <p>Select a deck to start studying</p>
+                    <h2>Your Sets</h2>
+                    <p>Select a set to start studying</p>
                 </div>
                 <div class="home-deck-grid" id="home-deck-grid"></div>
             </div>
@@ -65,7 +65,7 @@
                         <span class="stat-value" id="best-streak">0</span>
                         <span class="stat-label">Best Streak</span>
                     </div>
-                    <button class="stat-reset-btn" onclick="resetDeckStats()" title="Reset deck stats">&#8635;</button>
+                    <button class="stat-reset-btn" onclick="resetDeckStats()" title="Reset set stats">&#8635;</button>
                 </div>
 
                 <div class="progress" id="progress-bar">
@@ -76,10 +76,11 @@
                 <div class="card-container" id="card-container">
                     <div class="card" id="flashcard" onclick="flipCard()">
                         <div class="card-front">
-                            <p id="question">Select or create a deck to start!</p>
+                            <p id="question">Select or create a set to start!</p>
                         </div>
                         <div class="card-back">
                             <p id="answer">Answer will appear here</p>
+                            <img id="answer-img" class="card-back-img hidden" alt="" />
                         </div>
                     </div>
                 </div>
@@ -123,6 +124,7 @@
                         <div id="feedback-result" class="feedback-result"></div>
                         <p class="feedback-correct-label" id="feedback-correct-label">Correct answer:</p>
                         <p id="feedback-answer" class="feedback-answer"></p>
+                        <img id="feedback-answer-img" class="card-back-img hidden" alt="" style="margin: 0 auto 10px" />
                         <button class="modal-confirm learn-continue-btn" onclick="nextLearnCard()">Continue</button>
                     </div>
                     <div id="learn-results" class="learn-results hidden">
@@ -286,7 +288,7 @@
                     <button class="learn-btn" onclick="startLearnMode()">Learn</button>
                     <button class="test-btn" onclick="openTestConfig()">Test</button>
                     <button class="review-btn" id="review-btn" onclick="toggleReviewMode()">Review Wrong (<span id="wrong-review-count">0</span>)</button>
-                    <button class="manage-btn" onclick="openManageModal()">Manage Deck</button>
+                    <button class="manage-btn" onclick="openEditor('edit', currentDeckName)">Edit Set</button>
                 </div>
 
                 <div class="keyboard-hints" id="keyboard-hints">
@@ -294,60 +296,60 @@
                     <span>Arrow Keys: Navigate</span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Create Deck Modal -->
-    <div class="modal-overlay" id="create-deck-modal" onclick="closeModalOnOverlay(event, 'create-deck-modal')">
-        <div class="modal">
-            <h2>Create New Deck</h2>
-            <input type="text" id="new-deck-name" placeholder="Deck name (e.g., Biology)" onkeydown="if(event.key==='Enter')createDeck()" />
-            <div class="modal-buttons">
-                <button class="modal-cancel" onclick="closeModal('create-deck-modal')">Cancel</button>
-                <button class="modal-confirm" onclick="createDeck()">Create</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Manage Deck Modal -->
-    <div class="modal-overlay" id="manage-modal" onclick="closeModalOnOverlay(event, 'manage-modal')">
-        <div class="modal manage-modal">
-            <h2>Manage: <span id="manage-deck-name"></span> <span class="manage-card-count" id="manage-card-count">(0 cards)</span></h2>
-            <div class="folder-assign">
-                <label>Folder:</label>
-                <select id="deck-folder-select" onchange="assignDeckFolder()">
-                    <option value="">None</option>
-                </select>
-                <button class="folder-new-inline" onclick="createFolderFromManage()">+</button>
-            </div>
-            <div class="add-card-form">
-                <h3 id="card-form-title">Add New Card</h3>
-                <textarea id="card-question" placeholder="Term / Question" rows="2"></textarea>
-                <button class="ai-define-btn" id="ai-define-btn" onclick="aiDefine()">AI Define</button>
-                <textarea id="card-answer" placeholder="Definition / Answer" rows="2"></textarea>
-                <input type="hidden" id="edit-card-index" value="-1" />
-                <div class="card-form-buttons">
-                    <button class="modal-cancel" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none">Cancel Edit</button>
-                    <button class="modal-confirm" onclick="saveCard()">Save Card</button>
+            <!-- Set Editor View -->
+            <div id="editor-view" class="hidden">
+                <div class="editor-header">
+                    <button class="back-home-btn" onclick="closeEditor()">&larr; Back</button>
+                    <h2 class="editor-title" id="editor-title-heading">Create new set</h2>
+                    <button class="modal-confirm editor-save-btn" onclick="saveSet()">Save</button>
                 </div>
-            </div>
-            <div class="import-section">
-                <button class="import-toggle-btn" id="import-toggle-btn" onclick="toggleImport()">Paste / Import List</button>
-                <div class="import-area hidden" id="import-area">
-                    <textarea id="import-text" oninput="onImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;&#10;One card per line." rows="6"></textarea>
-                    <div class="import-actions">
-                        <span class="import-hint" id="import-preview">0 cards detected</span>
-                        <button class="modal-confirm" onclick="importCards()">Import All</button>
+
+                <div class="editor-form">
+                    <div class="editor-field">
+                        <label class="editor-label">Title</label>
+                        <input type="text" id="editor-title" class="editor-input" placeholder="Enter a title, like &quot;Biology - Chapter 22&quot;" />
+                    </div>
+                    <div class="editor-field">
+                        <label class="editor-label">Description (optional)</label>
+                        <textarea id="editor-desc" class="editor-textarea" placeholder="Add a description..." rows="2"></textarea>
+                    </div>
+                    <div class="editor-field">
+                        <label class="editor-label">Folder</label>
+                        <div class="editor-folder-row">
+                            <select id="editor-folder-select" class="editor-select">
+                                <option value="">None</option>
+                            </select>
+                            <button class="folder-new-inline" onclick="createFolderFromEditor()">+</button>
+                        </div>
+                    </div>
+                    <div class="editor-import-row">
+                        <button class="import-toggle-btn" id="editor-import-toggle" onclick="toggleEditorImport()">+ Import</button>
+                        <div class="import-area hidden" id="editor-import-area">
+                            <textarea id="editor-import-text" oninput="onEditorImportInput()" placeholder="Paste your list here. Supports:&#10;&#10;term - definition&#10;term: definition&#10;term&#9;definition (tab-separated)&#10;term = definition&#10;&#10;One card per line." rows="6"></textarea>
+                            <div class="import-actions">
+                                <span class="import-hint" id="editor-import-preview">0 cards detected</span>
+                                <button class="modal-confirm" onclick="editorImportCards()">Import All</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="card-list" id="card-list"></div>
-            <div class="modal-buttons">
-                <button class="modal-cancel delete-deck-btn" onclick="deleteDeck()">Delete Deck</button>
-                <button class="modal-confirm" onclick="closeModal('manage-modal')">Done</button>
+
+                <div class="editor-cards" id="editor-cards"></div>
+
+                <div class="editor-add-row">
+                    <button class="editor-add-card-btn" onclick="addEditorCardRow()">+ Add Card</button>
+                </div>
+
+                <div class="editor-bottom-actions">
+                    <button class="modal-cancel delete-deck-btn" id="editor-delete-btn" onclick="deleteSetFromEditor()" style="display:none">Delete Set</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Hidden file input for image picker -->
+    <input type="file" id="editor-file-input" accept="image/*" style="display:none" />
 
     <!-- Folder Edit Modal -->
     <div class="modal-overlay" id="folder-edit-modal" onclick="closeModalOnOverlay(event, 'folder-edit-modal')">
