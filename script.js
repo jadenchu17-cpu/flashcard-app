@@ -384,6 +384,17 @@ function renderAll() {
 }
 
 // ========== DECK MANAGEMENT ==========
+function updateTrackTotal() {
+    const total = currentCards.length;
+    document.getElementById("track-total").textContent = total;
+    document.getElementById("track-total2").textContent = total;
+}
+function resetTrackingCounts() {
+    rightCount = 0; wrongCount = 0;
+    document.getElementById("right-count").textContent = 0;
+    document.getElementById("wrong-count").textContent = 0;
+    updateTrackTotal();
+}
 function switchDeck(name) {
     if (!decks[name]) return;
     exitLearnMode(); exitTestMode();
@@ -391,8 +402,7 @@ function switchDeck(name) {
     isFlipped = false; rightCount = 0; wrongCount = 0; wrongCards = []; reviewWrongCards = []; reviewMode = false;
     // Restore (or create) the per-deck marked set
     if (!deckMarkedCards[name]) deckMarkedCards[name] = new Set();
-    document.getElementById("right-count").textContent = 0;
-    document.getElementById("wrong-count").textContent = 0;
+    resetTrackingCounts();
     document.getElementById("review-label").style.display = "none";
     document.getElementById("review-btn").classList.remove("active");
     updateReviewButton(); renderSidebar(); showStudyView(); updateCard(); renderStats();
@@ -511,6 +521,7 @@ function updateCard() {
     document.getElementById("answer").textContent = card.a;
     document.getElementById("current-card").textContent = currentIndex + 1;
     document.getElementById("total-cards").textContent = currentCards.length;
+    updateTrackTotal();
 }
 
 function nextCard() { if (currentCards.length === 0) return; if (currentIndex < currentCards.length - 1) { currentIndex++; updateCard(); } }
@@ -550,6 +561,7 @@ function checkReviewComplete() {
         reviewMode = false;
         currentCards = decks[currentDeckName]; currentIndex = 0;
         deckMarkedCards[currentDeckName] = new Set();
+        resetTrackingCounts();
         document.getElementById("review-label").style.display = "none";
         document.getElementById("review-btn").classList.remove("active");
         updateReviewButton(); updateCard();
@@ -557,28 +569,31 @@ function checkReviewComplete() {
     } else {
         // Still got some wrong — update wrongCards to only the ones still wrong, stay in review
         wrongCards = [...reviewWrongCards];
-        updateReviewButton();
+        reviewWrongCards = [];
+        currentCards = [...wrongCards]; currentIndex = 0;
+        deckMarkedCards[currentDeckName] = new Set();
+        resetTrackingCounts();
+        updateReviewButton(); updateCard();
     }
 }
 
 function shuffleDeck() {
     if (currentCards.length === 0) return;
     for (let i = currentCards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]]; }
-    currentIndex = 0; deckMarkedCards[currentDeckName] = new Set(); updateCard();
+    currentIndex = 0; deckMarkedCards[currentDeckName] = new Set(); resetTrackingCounts(); updateCard();
 }
 
 // ========== REVIEW WRONG ==========
 function toggleReviewMode() {
     if (reviewMode) { reviewMode = false; currentCards = decks[currentDeckName]; currentIndex = 0;
         deckMarkedCards[currentDeckName] = new Set();
+        resetTrackingCounts();
         document.getElementById("review-label").style.display = "none";
         document.getElementById("review-btn").classList.remove("active"); updateCard();
     } else { if (wrongCards.length === 0) return; reviewMode = true; currentCards = [...wrongCards]; currentIndex = 0;
         reviewWrongCards = []; // reset the review-round wrong tracker
         deckMarkedCards[currentDeckName] = new Set();
-        rightCount = 0; wrongCount = 0;
-        document.getElementById("right-count").textContent = 0;
-        document.getElementById("wrong-count").textContent = 0;
+        resetTrackingCounts();
         document.getElementById("review-label").style.display = "inline";
         document.getElementById("review-btn").classList.add("active"); updateCard(); }
 }
