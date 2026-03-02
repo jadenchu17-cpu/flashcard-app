@@ -1468,13 +1468,13 @@ async function aiSortImport() {
     btn.disabled = true;
 
     try {
-        const promptText = "Extract flashcard term/definition pairs from the following content. " +
-            "Return ONLY a JSON array of objects with \"q\" (term) and \"a\" (definition) keys. " +
-            "Each term should be a key concept, and each definition should be a clear, concise explanation. " +
-            "If the content has clear term-definition pairs, preserve them. " +
-            "If it's unstructured notes, slides, or images, identify all key terms and create definitions from the context. " +
+        const promptText = "You are a study assistant. Analyze the following content and identify ONLY the most important key terms, vocabulary, concepts, and ideas that a student would need to study. " +
+            "Do NOT turn every sentence or line into a flashcard. Be selective — pick only the terms that matter. " +
+            "For each term: if the content provides a definition or explanation, use that. If not, write a clear, accurate, concise definition yourself. " +
+            "Return ONLY a JSON array of objects with \"q\" (the term or concept) and \"a\" (the definition or explanation). " +
+            "Keep definitions concise but accurate (1-2 sentences max). " +
             "Return valid JSON only, no markdown, no explanation." +
-            (text ? "\n\nText:\n" + text : "");
+            (text ? "\n\nContent:\n" + text : "");
 
         // Build parts array — text prompt + optional file
         const parts = [{ text: promptText }];
