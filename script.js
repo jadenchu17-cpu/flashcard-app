@@ -677,7 +677,8 @@ function startLearnMode() {
     document.getElementById("card-container").classList.add("hidden");
     document.getElementById("flip-hint").classList.add("hidden");
     document.getElementById("controls").classList.add("hidden");
-    document.getElementById("score").classList.add("hidden");
+    document.getElementById("tracking-section").classList.add("hidden");
+    document.getElementById("stats-bar").classList.add("hidden");
     document.getElementById("action-buttons").classList.add("hidden");
     document.getElementById("progress-bar").classList.add("hidden");
     document.getElementById("learn-mode").classList.remove("hidden");
@@ -691,7 +692,8 @@ function exitLearnMode() {
     document.getElementById("flip-hint").classList.remove("hidden");
     if (currentDeckName) {
         document.getElementById("controls").classList.remove("hidden");
-        document.getElementById("score").classList.remove("hidden");
+        document.getElementById("tracking-section").classList.remove("hidden");
+        document.getElementById("stats-bar").classList.toggle("hidden", !trackingEnabled);
         document.getElementById("action-buttons").classList.remove("hidden");
         document.getElementById("progress-bar").classList.remove("hidden");
     }
@@ -1014,7 +1016,8 @@ function openTestConfig() {
     document.getElementById("card-container").classList.add("hidden");
     document.getElementById("flip-hint").classList.add("hidden");
     document.getElementById("controls").classList.add("hidden");
-    document.getElementById("score").classList.add("hidden");
+    document.getElementById("tracking-section").classList.add("hidden");
+    document.getElementById("stats-bar").classList.add("hidden");
     document.getElementById("action-buttons").classList.add("hidden");
     document.getElementById("progress-bar").classList.add("hidden");
     document.getElementById("test-mode").classList.remove("hidden");
@@ -1046,7 +1049,8 @@ function exitTestMode() {
     document.getElementById("flip-hint").classList.remove("hidden");
     if (currentDeckName) {
         document.getElementById("controls").classList.remove("hidden");
-        document.getElementById("score").classList.remove("hidden");
+        document.getElementById("tracking-section").classList.remove("hidden");
+        document.getElementById("stats-bar").classList.toggle("hidden", !trackingEnabled);
         document.getElementById("action-buttons").classList.remove("hidden");
         document.getElementById("progress-bar").classList.remove("hidden");
     }
