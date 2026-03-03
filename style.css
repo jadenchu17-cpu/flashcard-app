@@ -432,6 +432,37 @@ h1 { font-size: 1.8rem; color: var(--accent); }
     color: var(--accent);
 }
 
+.home-deck-card.dragging { opacity: 0.4; transform: scale(0.95); }
+
+.trash-drop-zone {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: rgba(233, 69, 96, 0.15);
+    border: 2px dashed #e94560;
+    color: #e94560;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+    z-index: 999;
+}
+.trash-drop-zone.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+.trash-drop-zone.drag-over {
+    background: #e94560;
+    color: #fff;
+    transform: scale(1.2);
+    border-style: solid;
+}
+
 /* ========== STUDY VIEW ========== */
 .study-header {
     display: flex;

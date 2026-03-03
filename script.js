@@ -299,13 +299,28 @@ function renderSidebar() {
 }
 
 // ========== HOME VIEW ==========
+let draggingDeckName = null;
+
 function renderHomeGrid() {
     const container = document.getElementById("home-deck-grid");
     container.innerHTML = "";
+    const trash = document.getElementById("trash-drop-zone");
     Object.keys(decks).forEach((name) => {
         const card = document.createElement("div");
         card.className = "home-deck-card";
-        card.onclick = () => { switchDeck(name); closeSidebar(); };
+        card.draggable = true;
+        card.onclick = () => { if (!draggingDeckName) { switchDeck(name); closeSidebar(); } };
+        card.addEventListener("dragstart", (e) => {
+            draggingDeckName = name;
+            card.classList.add("dragging");
+            trash.classList.add("visible");
+            e.dataTransfer.effectAllowed = "move";
+        });
+        card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            trash.classList.remove("visible", "drag-over");
+            draggingDeckName = null;
+        });
         const folder = deckFolders[name];
         const color = folder ? getFolderColor(folder) : null;
         const desc = deckDescriptions[name];
@@ -330,6 +345,26 @@ function renderHomeGrid() {
     importCard.textContent = "+ Quick Import";
     importCard.onclick = () => openQuickImport();
     container.appendChild(importCard);
+}
+
+function initTrashZone() {
+    const trash = document.getElementById("trash-drop-zone");
+    trash.addEventListener("dragover", (e) => { e.preventDefault(); trash.classList.add("drag-over"); });
+    trash.addEventListener("dragleave", () => { trash.classList.remove("drag-over"); });
+    trash.addEventListener("drop", (e) => {
+        e.preventDefault();
+        trash.classList.remove("visible", "drag-over");
+        if (!draggingDeckName) return;
+        const name = draggingDeckName;
+        draggingDeckName = null;
+        if (!confirm('Delete "' + name + '" and all its cards?')) return;
+        delete deckFolders[name]; saveFolders();
+        delete deckStats[name]; saveDeckStats();
+        delete deckDescriptions[name]; saveDeckDescs();
+        delete decks[name]; saveDecks();
+        if (currentDeckName === name) { currentDeckName = null; showHomeView(); }
+        else { renderSidebar(); renderHomeGrid(); }
+    });
 }
 
 function showHomeView() {
@@ -2017,7 +2052,7 @@ document.addEventListener("keydown", (e) => {
 // ========== INIT ==========
 function init() {
     applyTheme(); loadDecks(); loadFolders(); loadFolderColors(); loadStats(); loadDeckStats(); loadDeckDescs(); renderStats();
-    renderSidebar(); renderHomeGrid();
+    renderSidebar(); renderHomeGrid(); initTrashZone();
 
     // Add sidebar overlay for mobile
     const overlay = document.createElement("div");
