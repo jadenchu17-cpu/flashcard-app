@@ -1352,14 +1352,24 @@ function quickImportCreate() {
     switchDeck(name);
 }
 
-// ========== GEMINI AI IMPORT ==========
+// ========== AI IMPORT (Gemini + Groq) ==========
 let aiSortedCards = [];
 
-function getGeminiKey() { return localStorage.getItem("fc-gemini-key") || ""; }
-function saveGeminiKey() {
-    const key = document.getElementById("gemini-key-input").value.trim();
+function getAIProvider() { return localStorage.getItem("fc-ai-provider") || "gemini"; }
+function getAIKey() {
+    const provider = getAIProvider();
+    return localStorage.getItem("fc-" + provider + "-key") || localStorage.getItem("fc-gemini-key") || "";
+}
+function updateKeyPlaceholder() {
+    const provider = document.getElementById("ai-provider-select").value;
+    document.getElementById("ai-key-input").placeholder = "Paste your " + (provider === "groq" ? "Groq" : "Gemini") + " API key";
+}
+function saveAIKey() {
+    const key = document.getElementById("ai-key-input").value.trim();
     if (!key) { alert("Please paste your API key."); return; }
-    localStorage.setItem("fc-gemini-key", key);
+    const provider = document.getElementById("ai-provider-select").value;
+    localStorage.setItem("fc-ai-provider", provider);
+    localStorage.setItem("fc-" + provider + "-key", key);
     document.getElementById("ai-key-row").classList.add("hidden");
     document.getElementById("ai-key-hint").classList.add("hidden");
     aiSortImport();
@@ -1521,7 +1531,7 @@ async function aiSortImport() {
     const hasFile = importFileData && importFileData.type === "image" && importFileData.base64;
     if (!text && !hasFile) { alert("Paste some text or upload a file first."); return; }
 
-    const key = getGeminiKey();
+    const key = getAIKey();
 
     // No API key: use smart client-side parser (works great for lecture notes)
     if (!key && !hasFile) {
@@ -1555,14 +1565,16 @@ async function aiSortImport() {
     if (!key && hasFile) {
         document.getElementById("ai-key-row").classList.remove("hidden");
         document.getElementById("ai-key-hint").classList.remove("hidden");
-        alert("A Gemini API key is needed to process uploaded files.");
-        document.getElementById("gemini-key-input").focus();
+        alert("An API key is needed to process uploaded files. Choose Gemini or Groq.");
+        document.getElementById("ai-key-input").focus();
         return;
     }
 
     const btn = document.getElementById("ai-sort-btn");
     btn.textContent = "Sorting...";
     btn.disabled = true;
+
+    const provider = getAIProvider();
 
     try {
         const promptText = "You are a study assistant making flashcards. Read the following content carefully. " +
@@ -1577,45 +1589,70 @@ async function aiSortImport() {
             "Return ONLY a JSON array of objects with \"q\" and \"a\" keys. No markdown, no explanation." +
             (text ? "\n\nContent:\n" + text : "");
 
-        // Build parts array — text prompt + optional file
-        const parts = [{ text: promptText }];
-        if (hasFile) {
-            parts.push({ inlineData: { mimeType: importFileData.mimeType, data: importFileData.base64 } });
-        }
+        let resultText = "";
 
-        const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
-        let response = null;
-        for (const model of models) {
-            response = await fetch(
-                "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        contents: [{ parts: parts }],
-                        generationConfig: { temperature: 0.2 }
-                    })
-                }
-            );
-            if (response.ok) break;
-        }
-
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            const msg = err.error?.message || response.statusText;
-            if (response.status === 400 || response.status === 403 || msg.includes("API_KEY")) {
-                localStorage.removeItem("fc-gemini-key");
-                alert("API key error: " + msg + "\n\nPlease enter a valid Gemini API key.");
-                document.getElementById("ai-key-row").classList.remove("hidden");
-                document.getElementById("ai-key-hint").classList.remove("hidden");
-            } else {
-                alert("API error (" + response.status + "): " + msg);
+        if (provider === "groq") {
+            // Groq API (OpenAI-compatible)
+            const fileNote = (hasFile && importFileData.text) ? "\n\n[Extracted file text]:\n" + importFileData.text : "";
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+                body: JSON.stringify({
+                    model: "llama-3.3-70b-versatile",
+                    messages: [{ role: "user", content: promptText + fileNote }],
+                    temperature: 0.2
+                })
+            });
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                const msg = err.error?.message || response.statusText;
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem("fc-groq-key");
+                    alert("Groq API key error: " + msg + "\n\nPlease enter a valid key.");
+                    document.getElementById("ai-key-row").classList.remove("hidden");
+                    document.getElementById("ai-key-hint").classList.remove("hidden");
+                } else { alert("Groq API error (" + response.status + "): " + msg); }
+                return;
             }
-            return;
+            const data = await response.json();
+            resultText = data.choices?.[0]?.message?.content || "";
+        } else {
+            // Gemini API
+            const parts = [{ text: promptText }];
+            if (hasFile) {
+                parts.push({ inlineData: { mimeType: importFileData.mimeType, data: importFileData.base64 } });
+            }
+            const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+            let response = null;
+            for (const model of models) {
+                response = await fetch(
+                    "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            contents: [{ parts: parts }],
+                            generationConfig: { temperature: 0.2 }
+                        })
+                    }
+                );
+                if (response.ok) break;
+            }
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                const msg = err.error?.message || response.statusText;
+                if (response.status === 400 || response.status === 403 || msg.includes("API_KEY")) {
+                    localStorage.removeItem("fc-gemini-key");
+                    alert("Gemini API key error: " + msg + "\n\nPlease enter a valid key.");
+                    document.getElementById("ai-key-row").classList.remove("hidden");
+                    document.getElementById("ai-key-hint").classList.remove("hidden");
+                } else { alert("Gemini API error (" + response.status + "): " + msg); }
+                return;
+            }
+            const data = await response.json();
+            resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         }
 
-        const data = await response.json();
-        let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
         // Strip markdown code fence if present
         resultText = resultText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
 
