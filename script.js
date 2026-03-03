@@ -793,7 +793,10 @@ function selectMC(clickedBtn, isCorrect, correctAnswer) {
         if (btn.textContent === correctAnswer) btn.classList.add("mc-correct");
     });
     if (!isCorrect) clickedBtn.classList.add("mc-wrong");
-    setTimeout(() => handleLearnAnswer(isCorrect), 800);
+    if (isCorrect) { learnState.correctCount++; recordStudy(true); }
+    else { learnState.wrongCount++; learnState.wrongQueue.push(learnState.current); recordStudy(false); }
+    updateLearnProgress();
+    setTimeout(() => showNextLearnCard(), isCorrect ? 400 : 1000);
 }
 
 function getTypeableInfo(answer) {
@@ -886,7 +889,22 @@ function submitTypedAnswer() {
     const normalize = (s) => s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
     const normalInput = normalize(input);
     const isCorrect = normalInput === normalize(correct) || normalInput === normalize(simplified);
-    handleLearnAnswer(isCorrect);
+    if (isCorrect) { learnState.correctCount++; recordStudy(true); }
+    else { learnState.wrongCount++; learnState.wrongQueue.push(learnState.current); recordStudy(false); }
+    updateLearnProgress();
+    const inputEl = document.getElementById("type-input");
+    inputEl.disabled = true;
+    if (isCorrect) {
+        inputEl.style.borderColor = "#00b894";
+        inputEl.style.color = "#00b894";
+        setTimeout(() => { inputEl.style.borderColor = ""; inputEl.style.color = ""; inputEl.disabled = false; showNextLearnCard(); }, 400);
+    } else {
+        inputEl.style.borderColor = "#e94560";
+        inputEl.style.color = "#e94560";
+        document.getElementById("type-letter-hint").textContent = "Correct: " + correct;
+        document.getElementById("type-letter-hint").style.color = "#00b894";
+        setTimeout(() => { inputEl.style.borderColor = ""; inputEl.style.color = ""; inputEl.disabled = false; document.getElementById("type-letter-hint").style.color = ""; showNextLearnCard(); }, 1200);
+    }
 }
 
 function handleLearnAnswer(isCorrect) {
