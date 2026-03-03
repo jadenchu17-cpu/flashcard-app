@@ -1451,36 +1451,63 @@ async function onImportFileSelected() {
 }
 
 // Smart client-side parser: extracts "term (definition)" patterns from lecture notes
+function isFillerWord(w) {
+    const fillers = new Set(["the","a","an","and","or","but","of","in","to","for","by","with","from",
+        "as","at","on","into","through","over","toward","towards","its","their","his","her","our",
+        "your","was","were","is","are","had","have","has","been","being","also","often","called",
+        "known","such","other","many","most","some","any","all","each","every","much","very","more",
+        "less","greater","lesser","new","old","strong","great","major","key","main","both","than",
+        "no","not","so","too","just","even","still","yet","already","only","about","after","before",
+        "during","between","among","above","below","against","within","without","upon","under",
+        "along","across","behind","beyond","around","until","since","where","when","while","that",
+        "this","these","those","which","who","whose","whom","what","how","why","then","thus",
+        "hence","therefore","however","although","because","further","whether","neither","either"]);
+    if (fillers.has(w)) return true;
+    if (w.length > 3 && /ed$/.test(w)) return true;   // past tense verbs
+    if (w.length > 4 && /ing$/.test(w)) return true;  // gerunds
+    if (w.length > 3 && /ize$/.test(w)) return true;  // verbs like normalize
+    if (w.length > 3 && /ify$/.test(w)) return true;  // verbs like justify
+    return false;
+}
+
 function smartParseTerms(text) {
     const cards = [];
     const seen = new Set();
-    const skipWords = /^(the|a|an|and|or|also|often|called|known|as|through|including|toward|especially|over|its|their|was|were|is|are|had|have|has|with|from|that|this|these|those|which|who|of|in|to|for|by)\s+/gi;
 
-    // Split by "(" to find all parenthetical blocks
     const parts = text.split("(");
     for (let i = 1; i < parts.length; i++) {
         const closeParen = parts[i].indexOf(")");
         if (closeParen === -1) continue;
 
         const inside = parts[i].substring(0, closeParen).trim();
-        if (inside.length < 15) continue; // too short to be a definition
-        if (/^\d{4}/.test(inside)) continue; // skip dates like (1904-1905)
-        if (/^[a-z]/.test(inside) === false && /^[A-Z]{2,}/.test(inside)) continue; // skip acronyms
+        if (inside.length < 15) continue;          // too short for a real definition
+        if (/^\d{4}/.test(inside)) continue;        // skip dates like (1904-1941)
+        if (/^[A-Z]{2,}$/.test(inside.split(/\s/)[0])) continue; // skip acronyms
 
-        // Get the text before this parenthesis — grab last 1-6 words as term
+        // Grab last 2 words before the parenthesis
         const before = parts[i - 1].trim();
-        const words = before.split(/\s+/).slice(-6);
-        let term = words.join(" ");
+        const words = before.split(/\s+/).filter(w => w.length > 0);
+        if (words.length === 0) continue;
 
-        // Clean up: remove leading bullets, numbers, punctuation, common words
-        term = term.replace(/^[•\-\d.,;:\s*]+/, "").trim();
-        term = term.replace(skipWords, "").trim();
-        term = term.replace(skipWords, "").trim(); // run twice for "the" + "a" combos
+        // Clean punctuation from each word
+        const clean = w => w.replace(/^[•\-.,;:*|\d]+|[.,;:*|]+$/g, "");
 
-        if (term.length < 2 || term.length > 60) continue;
+        // Start with the last word (always part of the term)
+        let lastWord = clean(words[words.length - 1]);
+        if (!lastWord || lastWord.length < 2) continue;
+        let term = lastWord;
+
+        // Include the second-to-last word if it looks like part of the term
+        if (words.length >= 2) {
+            let prevWord = clean(words[words.length - 2]);
+            if (prevWord.length > 1 && !isFillerWord(prevWord.toLowerCase())) {
+                term = prevWord + " " + lastWord;
+            }
+        }
+
+        if (term.length < 2 || term.length > 40) continue;
         const key = term.toLowerCase();
         if (seen.has(key)) continue;
-
         seen.add(key);
         cards.push({ q: term, a: inside });
     }
