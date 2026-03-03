@@ -1566,10 +1566,13 @@ async function aiSortImport() {
 
     try {
         const promptText = "You are a study assistant making flashcards. Read the following content carefully. " +
-            "Pick ONLY the major key terms, names, events, or concepts — the ones a teacher would put on a test. " +
-            "AIM FOR 5-15 CARDS MAX, even if the content is long. Do NOT make a card for every sentence or detail. " +
-            "Be very selective. For example, from a paragraph about the Nanjing Massacre, make maybe 1-2 cards (e.g. 'Nanjing Massacre' and 'Rape of Nanking'), NOT a card for every fact. " +
-            "The 'q' should be a short term or name (not a full sentence). " +
+            "If the content is a VOCABULARY LIST or WORKSHEET (words in one language, or terms with blank/missing definitions), " +
+            "make a card for EVERY word — the 'q' is the word/term and the 'a' is the correct translation or definition. " +
+            "Fill in any missing translations or definitions with accurate answers. " +
+            "If the content is LECTURE NOTES or a TEXTBOOK passage, " +
+            "pick ONLY the major key terms, names, events, or concepts — the ones a teacher would put on a test. " +
+            "AIM FOR 5-15 CARDS MAX for lecture notes. Do NOT make a card for every sentence or detail. " +
+            "Be very selective. The 'q' should be a short term or name (not a full sentence). " +
             "The 'a' should be a concise definition (1-2 sentences max). Use the definition from the content if given, otherwise write an accurate one. " +
             "Return ONLY a JSON array of objects with \"q\" and \"a\" keys. No markdown, no explanation." +
             (text ? "\n\nContent:\n" + text : "");
