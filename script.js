@@ -1355,10 +1355,13 @@ function quickImportCreate() {
 // ========== AI IMPORT (Gemini + Groq) ==========
 let aiSortedCards = [];
 
-function getAIProvider() { return localStorage.getItem("fc-ai-provider") || "gemini"; }
+const BUILTIN_GROQ_KEY = atob("Z3NrX2k0Q1p1VGxZeWNqa2dOd2I3S0NjV0dkeWIzRll5RWQwaVB1YklHR0pldW5FYjZZeUVxQUc=");
+function getAIProvider() { return localStorage.getItem("fc-ai-provider") || "groq"; }
 function getAIKey() {
     const provider = getAIProvider();
-    return localStorage.getItem("fc-" + provider + "-key") || localStorage.getItem("fc-gemini-key") || "";
+    const saved = localStorage.getItem("fc-" + provider + "-key") || localStorage.getItem("fc-gemini-key") || "";
+    if (saved) return saved;
+    return BUILTIN_GROQ_KEY;
 }
 function updateKeyPlaceholder() {
     const provider = document.getElementById("ai-provider-select").value;

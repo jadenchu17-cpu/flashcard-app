@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html><head><title>Generate Icons</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:40px;background:#1a1a2e;color:#fff">
+<h2>Click each button to download the icon</h2>
+<p><button onclick="gen(192)">Download 192x192 PNG</button></p>
+<p><button onclick="gen(512)">Download 512x512 PNG</button></p>
+<canvas id="c" style="display:none"></canvas>
+<script>
+function gen(size) {
+    const c = document.getElementById('c');
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    // Background
+    const r = size * 0.156;
+    ctx.beginPath();
+    ctx.moveTo(r, 0); ctx.lineTo(size - r, 0); ctx.quadraticCurveTo(size, 0, size, r);
+    ctx.lineTo(size, size - r); ctx.quadraticCurveTo(size, size, size - r, size);
+    ctx.lineTo(r, size); ctx.quadraticCurveTo(0, size, 0, size - r);
+    ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath(); ctx.fillStyle = '#1a1a2e'; ctx.fill();
+    // Back card
+    const s = size / 512;
+    ctx.beginPath();
+    const bx=100*s, by=80*s, bw=312*s, bh=200*s, br=20*s;
+    ctx.moveTo(bx+br, by); ctx.lineTo(bx+bw-br, by); ctx.quadraticCurveTo(bx+bw, by, bx+bw, by+br);
+    ctx.lineTo(bx+bw, by+bh-br); ctx.quadraticCurveTo(bx+bw, by+bh, bx+bw-br, by+bh);
+    ctx.lineTo(bx+br, by+bh); ctx.quadraticCurveTo(bx, by+bh, bx, by+bh-br);
+    ctx.lineTo(bx, by+br); ctx.quadraticCurveTo(bx, by, bx+br, by);
+    ctx.closePath(); ctx.fillStyle = '#16213e'; ctx.strokeStyle = '#6c5ce7'; ctx.lineWidth = 8*s; ctx.fill(); ctx.stroke();
+    // Front card with gradient
+    const fx=120*s, fy=232*s, fw=312*s, fh=200*s, fr=20*s;
+    const grad = ctx.createLinearGradient(fx, fy, fx+fw, fy+fh);
+    grad.addColorStop(0, '#6c5ce7'); grad.addColorStop(1, '#e94560');
+    ctx.beginPath();
+    ctx.moveTo(fx+fr, fy); ctx.lineTo(fx+fw-fr, fy); ctx.quadraticCurveTo(fx+fw, fy, fx+fw, fy+fr);
+    ctx.lineTo(fx+fw, fy+fh-fr); ctx.quadraticCurveTo(fx+fw, fy+fh, fx+fw-fr, fy+fh);
+    ctx.lineTo(fx+fr, fy+fh); ctx.quadraticCurveTo(fx, fy+fh, fx, fy+fh-fr);
+    ctx.lineTo(fx, fy+fr); ctx.quadraticCurveTo(fx, fy, fx+fr, fy);
+    ctx.closePath(); ctx.globalAlpha = 0.9; ctx.fillStyle = grad; ctx.fill(); ctx.globalAlpha = 1;
+    // FC text
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold ' + (120*s) + 'px Segoe UI, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('FC', 256*s, 340*s);
+    // Download
+    const a = document.createElement('a');
+    a.download = 'icon-' + size + 'x' + size + '.png';
+    a.href = c.toDataURL('image/png');
+    a.click();
+}
+</script>
+</body></html>
