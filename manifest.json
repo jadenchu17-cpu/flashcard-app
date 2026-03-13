@@ -30,5 +30,35 @@
       "type": "image/png",
       "purpose": "any"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-home.png",
+      "sizes": "1564x718",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Home screen"
+    },
+    {
+      "src": "screenshot-dark.png",
+      "sizes": "1564x718",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Create new set - Dark mode"
+    },
+    {
+      "src": "screenshot-light.png",
+      "sizes": "1564x718",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Create new set - Light mode"
+    },
+    {
+      "src": "screenshot-import.png",
+      "sizes": "756x604",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Quick Import with AI"
+    }
   ]
 }
