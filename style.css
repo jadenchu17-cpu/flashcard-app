@@ -689,6 +689,9 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .test-stepper button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface-2); color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
 .test-stepper button:hover { border-color: var(--accent); color: var(--accent); }
 .test-stepper span { font-size: 1.2rem; font-weight: 700; min-width: 24px; text-align: center; color: var(--accent); }
+.test-count-input { width: 50px; text-align: center; font-size: 1.2rem; font-weight: 700; color: var(--accent); background: var(--input-bg); border: 1px solid var(--border); border-radius: 8px; padding: 4px; -moz-appearance: textfield; }
+.test-count-input::-webkit-outer-spin-button, .test-count-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.test-count-input:focus { border-color: var(--accent); outline: none; }
 .test-config-total { text-align: center; font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px; }
 .test-config-total strong { color: var(--accent); }
 .test-start-btn { width: 100%; padding: 14px; font-size: 1rem; }

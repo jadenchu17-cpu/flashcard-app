@@ -166,7 +166,7 @@
                                 <label>Multiple Choice</label>
                                 <div class="test-stepper">
                                     <button onclick="adjustTestCount('mc', -1)">-</button>
-                                    <span id="test-mc-count">0</span>
+                                    <input type="number" id="test-mc-count" class="test-count-input" value="0" min="0" oninput="setTestCount('mc', this.value)" />
                                     <button onclick="adjustTestCount('mc', 1)">+</button>
                                 </div>
                             </div>
@@ -174,7 +174,7 @@
                                 <label>Matching</label>
                                 <div class="test-stepper">
                                     <button onclick="adjustTestCount('match', -1)">-</button>
-                                    <span id="test-match-count">0</span>
+                                    <input type="number" id="test-match-count" class="test-count-input" value="0" min="0" oninput="setTestCount('match', this.value)" />
                                     <button onclick="adjustTestCount('match', 1)">+</button>
                                 </div>
                             </div>
@@ -182,7 +182,7 @@
                                 <label>Writing</label>
                                 <div class="test-stepper">
                                     <button onclick="adjustTestCount('write', -1)">-</button>
-                                    <span id="test-write-count">0</span>
+                                    <input type="number" id="test-write-count" class="test-count-input" value="0" min="0" oninput="setTestCount('write', this.value)" />
                                     <button onclick="adjustTestCount('write', 1)">+</button>
                                 </div>
                             </div>

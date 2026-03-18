@@ -1759,9 +1759,9 @@ function openTestConfig() {
     const max = decks[currentDeckName].length;
     document.getElementById("test-max-cards").textContent = max;
     document.getElementById("test-total-max").textContent = max;
-    document.getElementById("test-mc-count").textContent = 0;
-    document.getElementById("test-match-count").textContent = 0;
-    document.getElementById("test-write-count").textContent = 0;
+    document.getElementById("test-mc-count").value = 0;
+    document.getElementById("test-match-count").value = 0;
+    document.getElementById("test-write-count").value = 0;
     document.getElementById("test-total-count").textContent = 0;
     document.getElementById("test-start-btn").disabled = true;
     // Show test mode, config screen
@@ -1789,7 +1789,21 @@ function adjustTestCount(type, delta) {
     if (total - testConfig[type] + val > max) val = max - (total - testConfig[type]);
     if (type === "match" && val === 1) val = 0;
     testConfig[type] = val;
-    document.getElementById("test-" + type + "-count").textContent = val;
+    document.getElementById("test-" + type + "-count").value = val;
+    const newTotal = testConfig.mc + testConfig.match + testConfig.write;
+    document.getElementById("test-total-count").textContent = newTotal;
+    document.getElementById("test-start-btn").disabled = newTotal === 0;
+}
+
+function setTestCount(type, rawVal) {
+    const max = decks[currentDeckName].length;
+    let val = parseInt(rawVal) || 0;
+    if (val < 0) val = 0;
+    const othersTotal = (testConfig.mc + testConfig.match + testConfig.write) - testConfig[type];
+    if (val + othersTotal > max) val = max - othersTotal;
+    if (type === "match" && val === 1) val = 0;
+    testConfig[type] = val;
+    document.getElementById("test-" + type + "-count").value = val;
     const newTotal = testConfig.mc + testConfig.match + testConfig.write;
     document.getElementById("test-total-count").textContent = newTotal;
     document.getElementById("test-start-btn").disabled = newTotal === 0;
