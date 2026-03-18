@@ -1074,6 +1074,70 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .import-preview-term { color: var(--text); }
 .import-preview-def { color: var(--text-secondary); }
 
+/* ========== FULLSCREEN / STANDALONE MODE ========== */
+@media (display-mode: fullscreen), (display-mode: standalone) {
+    .main-content {
+        padding: 40px 5vw;
+    }
+    .header {
+        max-width: 100%;
+    }
+    h1 { font-size: 2.2rem; }
+
+    /* Cards scale to fill available width */
+    .card { width: min(80vw, 900px); height: min(50vh, 500px); }
+    .card-front, .card-back { font-size: 1.6rem; padding: 40px; }
+
+    /* Study view elements stretch */
+    .study-header { max-width: 100%; }
+    .progress { font-size: 1.1rem; }
+    .flip-hint { font-size: 1rem; }
+    .controls { gap: 16px; }
+    .nav-btn, .wrong-btn, .right-btn { padding: 14px 32px; font-size: 1.1rem; }
+    .action-buttons { gap: 14px; }
+    .shuffle-btn, .manage-btn, .learn-btn, .test-btn, .review-btn { padding: 12px 28px; font-size: 1rem; }
+    .score { font-size: 1.3rem; gap: 40px; }
+    .keyboard-hints { font-size: 0.9rem; }
+
+    /* Stats bar */
+    .stats-bar { padding: 20px 30px; gap: 30px; }
+    .stat-value { font-size: 1.8rem; }
+    .stat-label { font-size: 0.85rem; }
+
+    /* Learn mode scales up */
+    .learn-mode { max-width: min(90vw, 900px); }
+    .learn-question-card { font-size: 1.5rem; padding: 40px; min-height: 150px; }
+    .mc-option { padding: 16px 24px; font-size: 1.1rem; }
+    .learn-title { font-size: 1.4rem; }
+    .feedback-result { font-size: 1.8rem; }
+    .feedback-answer { font-size: 1.2rem; padding: 14px; }
+
+    /* Test mode scales up */
+    .test-mode { max-width: min(90vw, 900px); }
+    .test-config-row { padding: 18px 24px; }
+    .test-config-row label { font-size: 1.1rem; }
+    .test-stepper span { font-size: 1.4rem; }
+
+    /* Home view grid fills space */
+    .home-deck-grid { max-width: 100%; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+    .home-welcome h2 { font-size: 1.8rem; }
+    .home-welcome p { font-size: 1.1rem; }
+    .home-deck-card { padding: 28px; }
+    .home-deck-card-name { font-size: 1.3rem; }
+
+    /* Editor fills space */
+    .editor-form { max-width: 100%; }
+    .editor-cards { max-width: 100%; }
+    .editor-header { max-width: 100%; }
+    .editor-add-row { max-width: 100%; }
+    .editor-bottom-actions { max-width: 100%; }
+    .editor-title { font-size: 1.5rem; }
+
+    /* Modals scale up */
+    .modal { max-width: 600px; padding: 36px; }
+    .modal h2 { font-size: 1.4rem; }
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .sidebar {
