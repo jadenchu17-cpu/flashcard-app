@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(C:/Users/jaden_1m5x0pm/AppData/Local/Programs/Git/bin/bash.exe -c \"cd /c/Users/jaden_1m5x0pm/OneDrive/flashcard-app && git status\")"
+      "Bash(C:/Users/jaden_1m5x0pm/AppData/Local/Programs/Git/bin/bash.exe -c \"cd /c/Users/jaden_1m5x0pm/OneDrive/flashcard-app && git status\")",
+      "Bash(start \"\" \"c:\\\\Users\\\\jaden_1m5x0pm\\\\OneDrive\\\\flashcard-app\\\\buddhism-vs-christianity-presentation.html\")",
+      "Bash(cmd.exe /c start \"\" \"c:\\\\Users\\\\jaden_1m5x0pm\\\\OneDrive\\\\flashcard-app\\\\buddhism-vs-christianity-presentation.html\")"
     ]
   }
 }
