@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 1024px; height: 500px; overflow: hidden; background: #1a1a2e; }
+
+  .container {
+    width: 1024px;
+    height: 500px;
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Background glow blobs */
+  .blob1 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(108,92,231,0.25) 0%, transparent 70%);
+    top: -100px;
+    left: -80px;
+    border-radius: 50%;
+  }
+
+  .blob2 {
+    position: absolute;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(233,69,96,0.2) 0%, transparent 70%);
+    bottom: -80px;
+    right: 200px;
+    border-radius: 50%;
+  }
+
+  .blob3 {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(108,92,231,0.15) 0%, transparent 70%);
+    bottom: 40px;
+    left: 300px;
+    border-radius: 50%;
+  }
+
+  /* Left side text */
+  .left {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+  }
+
+  .tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #6c5ce7, #e94560);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 52px;
+    font-weight: 900;
+    color: white;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, #6c5ce7, #e94560);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 17px;
+    color: rgba(255,255,255,0.55);
+    font-weight: 400;
+    line-height: 1.6;
+    max-width: 380px;
+  }
+
+  /* Right side — card stack */
+  .right {
+    position: relative;
+    z-index: 2;
+    width: 320px;
+    height: 360px;
+    flex-shrink: 0;
+  }
+
+  .card {
+    position: absolute;
+    width: 280px;
+    border-radius: 18px;
+    padding: 24px 26px;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .card-back {
+    background: #16213e;
+    border: 2px solid rgba(108,92,231,0.3);
+    top: 40px;
+    left: 40px;
+    height: 160px;
+    transform: rotate(6deg);
+  }
+
+  .card-mid {
+    background: linear-gradient(135deg, #6c5ce7 0%, #e94560 100%);
+    top: 20px;
+    left: 20px;
+    height: 160px;
+    transform: rotate(-3deg);
+    opacity: 0.7;
+  }
+
+  .card-front {
+    background: #16213e;
+    border: 2px solid #6c5ce7;
+    top: 0;
+    left: 0;
+    height: 170px;
+    box-shadow: 0 20px 60px rgba(108,92,231,0.3);
+  }
+
+  .card-front .term {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6c5ce7;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .card-front .word {
+    font-size: 26px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 8px;
+  }
+
+  .card-front .def {
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.5;
+  }
+
+  /* Bottom card */
+  .card-answer {
+    position: absolute;
+    width: 280px;
+    background: linear-gradient(135deg, #6c5ce7, #e94560);
+    border-radius: 18px;
+    padding: 20px 26px;
+    top: 195px;
+    left: 0;
+    box-shadow: 0 16px 40px rgba(233,69,96,0.3);
+  }
+
+  .card-answer .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .card-answer .answer {
+    font-size: 20px;
+    font-weight: 800;
+    color: white;
+  }
+
+  .card-answer .check {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 28px;
+  }
+
+  /* Dots decoration */
+  .dots {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 120px;
+    opacity: 0.06;
+    background-image: radial-gradient(circle, white 1.5px, transparent 1.5px);
+    background-size: 20px 20px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="blob1"></div>
+  <div class="blob2"></div>
+  <div class="blob3"></div>
+  <div class="dots"></div>
+
+  <div class="left">
+    <div class="tag">Study App</div>
+    <h1>Flashcard<br><span>Study App</span></h1>
+    <p class="subtitle">Learn smarter with AI-powered flashcards, tests, and progress tracking.</p>
+  </div>
+
+  <div class="right">
+    <div class="card card-back"></div>
+    <div class="card card-mid"></div>
+    <div class="card card-front">
+      <div class="term">Term</div>
+      <div class="word">Photosynthesis</div>
+      <div class="def">The process by which plants convert sunlight into energy</div>
+    </div>
+    <div class="card card-answer">
+      <div class="label">Definition</div>
+      <div class="answer">Converting light<br>into energy ✓</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

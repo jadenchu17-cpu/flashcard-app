@@ -73,6 +73,7 @@
                 <div class="progress" id="progress-bar">
                     Card <span id="current-card">1</span> of <span id="total-cards">0</span>
                     <span id="review-label" class="review-label">— Reviewing Wrong Answers</span>
+                    <button class="swap-btn" id="swap-btn" onclick="toggleSwapMode()" title="Swap terms and definitions">⇄ Swap</button>
                 </div>
 
                 <div class="card-container" id="card-container">
@@ -373,26 +374,22 @@
                     <label class="editor-label">Paste text or upload a file</label>
                     <button class="file-upload-btn" onclick="pickImportFile()">Upload File</button>
                 </div>
-                <input type="file" id="import-file-input" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp" style="display:none" onchange="onImportFileSelected()" />
+                <input type="file" id="import-file-input" accept=".txt,.pdf" style="display:none" onchange="onImportFileSelected()" />
                 <div class="file-info hidden" id="import-file-info">
                     <span id="import-file-name"></span>
                     <button class="file-remove-btn" onclick="removeImportFile()">&times;</button>
                 </div>
-                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste anything here — notes, a list of terms, study material, etc.&#10;&#10;Or upload a file (PDF, image, text) above.&#10;&#10;Then click 'AI Sort' to generate flashcards." rows="8"></textarea>
+                <textarea id="quick-import-text" class="editor-textarea" oninput="onQuickImportInput()" placeholder="Paste your list here. Auto-detects any format:&#10;&#10;term | definition&#10;term - definition&#10;term: definition&#10;term&#9;definition&#10;&#10;Or upload a .txt or .pdf file above." rows="8"></textarea>
             </div>
             <div class="ai-import-row">
-                <button class="ai-sort-btn" id="ai-sort-btn" onclick="aiSortImport()">AI Sort</button>
                 <span class="import-hint" id="quick-import-count">0 cards detected</span>
             </div>
-            <div class="ai-key-row hidden" id="ai-key-row">
-                <select id="ai-provider-select" class="editor-input" style="margin-bottom:0;max-width:110px" onchange="updateKeyPlaceholder()">
-                    <option value="gemini">Gemini</option>
-                    <option value="groq">Groq</option>
-                </select>
-                <input type="password" id="ai-key-input" class="editor-input" placeholder="Paste your Gemini API key" style="margin-bottom:0" />
-                <button class="modal-confirm" onclick="saveAIKey()" style="white-space:nowrap">Save Key</button>
+            <!-- Hidden elements kept for JS compatibility -->
+            <div class="ai-key-row hidden" id="ai-key-row" style="display:none!important">
+                <select id="ai-provider-select"><option value="groq">Groq</option></select>
+                <input type="password" id="ai-key-input" />
             </div>
-            <p class="ai-key-hint hidden" id="ai-key-hint">Get a free key: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">Gemini</a> or <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">Groq</a></p>
+            <p class="ai-key-hint hidden" id="ai-key-hint" style="display:none!important"></p>
             <div class="import-preview-table hidden" id="quick-import-preview"></div>
             <div class="modal-buttons" style="margin-top: 15px;">
                 <button class="modal-cancel" onclick="closeQuickImport()">Cancel</button>

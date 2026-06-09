@@ -18,6 +18,19 @@ let deckStats = {};         // { "APUSH": { studied: 5, correct: 3 }, ... }
 let expandedFolders = new Set();
 let learnActive = false;
 let learnState = {};
+let swapMode = false;
+
+function getCard(card) {
+    return swapMode ? { q: card.a, a: card.q, img: card.img } : card;
+}
+
+function toggleSwapMode() {
+    swapMode = !swapMode;
+    const btn = document.getElementById("swap-btn");
+    btn.classList.toggle("swap-active", swapMode);
+    btn.textContent = swapMode ? "⇄ Swapped" : "⇄ Swap";
+    updateCard();
+}
 let sidebarOpen = false;
 let deckMarkedCards = {};    // { "APUSH": Set([0,1,3]), ... } tracks marked cards per deck
 let draggedDeckName = null;  // for drag-and-drop
@@ -237,8 +250,15 @@ function makeDeckItem(name, nested) {
         draggedDeckName = name;
         item.classList.add("dragging");
         e.dataTransfer.effectAllowed = "move";
+        const trash = document.getElementById("trash-drop-zone");
+        if (trash) trash.classList.add("visible");
     };
-    item.ondragend = () => { draggedDeckName = null; item.classList.remove("dragging"); };
+    item.ondragend = () => {
+        draggedDeckName = null;
+        item.classList.remove("dragging");
+        const trash = document.getElementById("trash-drop-zone");
+        if (trash) trash.classList.remove("visible", "drag-over");
+    };
     return item;
 }
 
@@ -354,9 +374,9 @@ function initTrashZone() {
     trash.addEventListener("drop", (e) => {
         e.preventDefault();
         trash.classList.remove("visible", "drag-over");
-        if (!draggingDeckName) return;
-        const name = draggingDeckName;
-        draggingDeckName = null;
+        const name = draggingDeckName || draggedDeckName;
+        draggingDeckName = null; draggedDeckName = null;
+        if (!name) return;
         if (!confirm('Delete "' + name + '" and all its cards?')) return;
         delete deckFolders[name]; saveFolders();
         delete deckStats[name]; saveDeckStats();
@@ -528,7 +548,7 @@ function updateCard() {
         imgEl.classList.add("hidden"); imgEl.src = "";
         return;
     }
-    const card = currentCards[currentIndex];
+    const card = getCard(currentCards[currentIndex]);
     isFlipped = false; document.getElementById("flashcard").classList.remove("flipped");
     document.getElementById("question").textContent = card.q;
     document.getElementById("answer").textContent = card.a;
@@ -731,11 +751,12 @@ function showNextLearnCard() {
 
     learnState.current = learnState.queue.shift();
     const allCards = decks[currentDeckName];
-    const wordCount = learnState.current.a.trim().split(/\s+/).length;
+    const currentCard = getCard(learnState.current);
+    const wordCount = currentCard.a.trim().split(/\s+/).length;
     const canType = wordCount <= 3 && allCards.length >= 4;
     learnState.mode = (canType && Math.random() > 0.4) ? "type" : "mc";
     updateLearnProgress();
-    document.getElementById("learn-question").textContent = learnState.current.q;
+    document.getElementById("learn-question").textContent = currentCard.q;
 
     if (learnState.mode === "mc") showMCMode();
     else showTypeMode();
@@ -754,10 +775,11 @@ function updateLearnProgress() {
 function showMCMode() {
     document.getElementById("learn-mc").classList.remove("hidden");
     document.getElementById("learn-type").classList.add("hidden");
-    const correctAnswer = learnState.current.a;
+    const currentCard = getCard(learnState.current);
+    const correctAnswer = currentCard.a;
     const allCards = decks[currentDeckName];
-    const others = allCards.filter((c) => c.a !== correctAnswer).sort(() => Math.random() - 0.5);
-    const wrongOpts = others.slice(0, 3).map((c) => c.a);
+    const others = allCards.filter((c) => getCard(c).a !== correctAnswer).sort(() => Math.random() - 0.5);
+    const wrongOpts = others.slice(0, 3).map((c) => getCard(c).a);
     const options = [correctAnswer, ...wrongOpts].sort(() => Math.random() - 0.5);
     const container = document.getElementById("mc-options");
     container.innerHTML = "";
@@ -816,7 +838,7 @@ function getTypeableInfo(answer) {
 function showTypeMode() {
     document.getElementById("learn-mc").classList.add("hidden");
     document.getElementById("learn-type").classList.remove("hidden");
-    const answer = learnState.current.a;
+    const answer = getCard(learnState.current).a;
     learnState.hintsUsed = 0;
     learnState.revealed = new Array(answer.length).fill(false);
     learnState.typeableInfo = getTypeableInfo(answer);
@@ -836,7 +858,7 @@ function showTypeMode() {
 
 function updateLetterHint() {
     const info = learnState.typeableInfo;
-    const display = (info && info.note) ? info.simplified : learnState.current.a;
+    const display = (info && info.note) ? info.simplified : getCard(learnState.current).a;
 
     if (learnState.revealed.length !== display.length) {
         learnState.revealed = new Array(display.length).fill(false);
@@ -853,7 +875,7 @@ function updateLetterHint() {
 }
 
 function getHint() {
-    const answer = learnState.current.a;
+    const answer = getCard(learnState.current).a;
     const unrevealed = [];
     for (let i = 0; i < answer.length; i++) {
         if (!learnState.revealed[i] && answer[i] !== " ") unrevealed.push(i);
@@ -867,7 +889,7 @@ function getHint() {
 function submitTypedAnswer() {
     const input = document.getElementById("type-input").value.trim();
     if (!input) return;
-    const correct = learnState.current.a;
+    const correct = getCard(learnState.current).a;
     const simplified = learnState.typeableInfo ? learnState.typeableInfo.simplified : correct;
     const normalize = (s) => s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
     const normalInput = normalize(input);
@@ -905,7 +927,7 @@ function showLearnFeedback(isCorrect) {
     resultEl.className = "feedback-result " + (isCorrect ? "feedback-correct" : "feedback-wrong");
     document.getElementById("feedback-correct-label").style.display = isCorrect ? "none" : "block";
     document.getElementById("feedback-answer").style.display = isCorrect ? "none" : "block";
-    document.getElementById("feedback-answer").textContent = learnState.current.a;
+    document.getElementById("feedback-answer").textContent = getCard(learnState.current).a;
     const fbImg = document.getElementById("feedback-answer-img");
     if (!isCorrect && learnState.current.img) { fbImg.src = learnState.current.img; fbImg.classList.remove("hidden"); }
     else { fbImg.src = ""; fbImg.classList.add("hidden"); }
@@ -945,19 +967,68 @@ function toggleImport() {
 }
 
 function parseImportText(text) {
-    const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 0);
+    if (!text || !text.trim()) return [];
+
+    // Strategy 1: run-on pipe block — "Term | Def Term2 | Def2" with few newlines
+    const pipeCount = (text.match(/ \| /g) || []).length;
+    const rawLines = text.split("\n").filter(l => l.trim());
+    if (pipeCount >= 2 && rawLines.length <= Math.max(3, pipeCount * 0.3)) {
+        // Insert newline before each new term: lowercase/punctuation end + capitalized word(s) + " | "
+        const normalized = text.replace(
+            /([a-z,;])\s+([A-Z][A-Za-z\s]*?)\s+\|/g,
+            (match, prev, term) => {
+                // Only split if the term is short (1-5 words)
+                if (term.trim().split(/\s+/).length <= 5) return prev + "\n" + term.trim() + " |";
+                return match;
+            }
+        );
+        const pipeLines = normalized.split("\n").map(l => l.trim()).filter(l => l.includes(" | "));
+        if (pipeLines.length >= 2) {
+            const cards = pipeLines.map(line => {
+                const idx = line.indexOf(" | ");
+                const q = line.substring(0, idx).trim().replace(/^\d+[\.\)\-]\s*/, "");
+                const a = line.substring(idx + 3).trim();
+                return (q && a && q.length < 100) ? { q, a } : null;
+            }).filter(Boolean);
+            if (cards.length >= 2) return cards;
+        }
+    }
+
+    // Strategy 2: two alternating lines — odd lines are terms, even lines are definitions
+    if (rawLines.length >= 4 && rawLines.length % 2 === 0) {
+        const separators = ["\t", " | ", " - ", " : ", ": ", " = "];
+        const hasSep = rawLines.some(l => separators.some(s => l.includes(s)));
+        if (!hasSep) {
+            // Check if lines alternate short/long (terms are shorter than definitions)
+            const odds = rawLines.filter((_, i) => i % 2 === 0);
+            const evens = rawLines.filter((_, i) => i % 2 === 1);
+            const avgOdd = odds.reduce((s, l) => s + l.length, 0) / odds.length;
+            const avgEven = evens.reduce((s, l) => s + l.length, 0) / evens.length;
+            if (avgEven > avgOdd * 1.3) {
+                return odds.map((q, i) => ({
+                    q: q.replace(/^\d+[\.\)\-]\s*/, "").trim(),
+                    a: evens[i].trim()
+                })).filter(c => c.q && c.a);
+            }
+        }
+    }
+
+    // Strategy 3: standard separator-based parsing on lines
+    const lines = rawLines;
     if (lines.length === 0) return [];
-    const separators = ["\t", " - ", " : ", ": ", " = ", " | "];
+    const separators = ["\t", " | ", " - ", " : ", ": ", " = "];
     let bestSep = null, bestCount = 0;
-    for (const sep of separators) { const count = lines.filter((l) => l.includes(sep)).length; if (count > bestCount) { bestCount = count; bestSep = sep; } }
+    for (const sep of separators) {
+        const count = lines.filter(l => l.includes(sep)).length;
+        if (count > bestCount) { bestCount = count; bestSep = sep; }
+    }
     if (!bestSep || bestCount === 0) return [];
     const cards = [];
     for (const line of lines) {
         const idx = line.indexOf(bestSep); if (idx === -1) continue;
-        const q = line.substring(0, idx).trim();
+        const q = line.substring(0, idx).trim().replace(/^\d+[\.\)\-]\s*/, "");
         const a = line.substring(idx + bestSep.length).trim();
-        const cleanQ = q.replace(/^\d+[\.\)\-]\s*/, "").trim();
-        if (cleanQ && a) cards.push({ q: cleanQ, a: a });
+        if (q && a) cards.push({ q, a });
     }
     return cards;
 }
@@ -1427,14 +1498,12 @@ async function onImportFileSelected() {
                     importFileData = { type: "text", text: fullText.trim() };
                     onQuickImportInput();
                 } else {
-                    // PDF has no selectable text (scanned) — send as image to Gemini
-                    const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ""));
-                    importFileData = { type: "image", mimeType: "application/pdf", base64: base64 };
+                    alert("This PDF appears to be a scanned image and has no selectable text. Please copy and paste the text manually.");
+                    removeImportFile();
                 }
             } else {
-                // pdf.js not loaded — send raw PDF to Gemini
-                const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ""));
-                importFileData = { type: "image", mimeType: "application/pdf", base64: base64 };
+                alert("PDF reader not loaded. Please copy and paste the text manually.");
+                removeImportFile();
             }
         } catch (err) {
             alert("Error reading PDF: " + err.message);
@@ -1443,24 +1512,8 @@ async function onImportFileSelected() {
         }
         document.getElementById("import-file-name").textContent = name;
     } else {
-        // Image file: read as base64 for Gemini multimodal
-        if (file.size > 10 * 1024 * 1024) { alert("File too large (max 10MB)."); removeImportFile(); return; }
-        const reader = new FileReader();
-        reader.onload = () => {
-            const dataUrl = reader.result;
-            const mimeType = file.type || "image/jpeg";
-            // Compress large images
-            if (file.size > 2 * 1024 * 1024) {
-                compressImage(dataUrl, 1200, 0.8, (compressed) => {
-                    const base64 = compressed.split(",")[1];
-                    importFileData = { type: "image", mimeType: "image/jpeg", base64: base64 };
-                });
-            } else {
-                const base64 = dataUrl.split(",")[1];
-                importFileData = { type: "image", mimeType: mimeType, base64: base64 };
-            }
-        };
-        reader.readAsDataURL(file);
+        alert("Unsupported file type. Please upload a .txt or .pdf file.");
+        removeImportFile();
     }
 }
 
@@ -1529,10 +1582,56 @@ function smartParseTerms(text) {
     return cards;
 }
 
+function splitPipeText(text) {
+    // Detect run-on "Term | Definition Term2 | Definition2" with few/no newlines
+    const pipeCount = (text.match(/ \| /g) || []).length;
+    const lineCount = text.split("\n").filter(l => l.trim()).length;
+    if (pipeCount < 2 || lineCount > pipeCount * 0.5) return null;
+
+    // Insert newlines before each "Term | " by finding where the previous definition ends.
+    // A new term starts after: a letter/period/word boundary followed by 1-5 capitalized words then " | "
+    // Replace occurrences of " CapWord... | " that come after a lowercase word (end of sentence)
+    const normalized = text.replace(
+        /([a-z,;])\s+([A-Z][A-Za-z]*(?:\s+[A-Z][A-Za-z]*){0,4})\s+\|/g,
+        (_, prev, term) => prev + "\n" + term + " |"
+    );
+
+    const lines = normalized.split("\n").map(l => l.trim()).filter(l => l.includes(" | "));
+    if (lines.length < 2) return null;
+
+    return lines.map(line => {
+        const idx = line.indexOf(" | ");
+        const q = line.substring(0, idx).trim().replace(/^\d+[\.\)\-]\s*/, "");
+        const a = line.substring(idx + 3).trim();
+        return (q && a) ? { q, a } : null;
+    }).filter(Boolean);
+}
+
 async function aiSortImport() {
     const text = document.getElementById("quick-import-text").value.trim();
     const hasFile = importFileData && importFileData.type === "image" && importFileData.base64;
     if (!text && !hasFile) { alert("Paste some text or upload a file first."); return; }
+
+    // Fast path: detect "Term | Definition Term2 | Definition2" run-on format
+    if (!hasFile) {
+        const pipeCards = splitPipeText(text);
+        if (pipeCards && pipeCards.length > 2) {
+            aiSortedCards = pipeCards;
+            const count = pipeCards.length;
+            document.getElementById("quick-import-count").textContent = count + " card" + (count !== 1 ? "s" : "") + " detected (Auto)";
+            const preview = document.getElementById("quick-import-preview");
+            preview.classList.remove("hidden");
+            let html = '<div class="import-preview-header"><span>#</span><span>Term</span><span>Definition</span></div>';
+            pipeCards.forEach((c, i) => {
+                html += '<div class="import-preview-row"><span class="import-preview-num">' + (i + 1) + '</span>' +
+                    '<span class="import-preview-term">' + escapeHtml(c.q) + '</span>' +
+                    '<span class="import-preview-def">' + escapeHtml(c.a) + '</span></div>';
+            });
+            preview.innerHTML = html;
+            document.getElementById("quick-import-btn").disabled = false;
+            return;
+        }
+    }
 
     const key = getAIKey();
 
@@ -1579,31 +1678,28 @@ async function aiSortImport() {
 
     const provider = getAIProvider();
 
-    try {
-        const promptText = "You are a study assistant making flashcards. Read the following content carefully. " +
-            "If the content is a VOCABULARY LIST or WORKSHEET (words in one language, or terms with blank/missing definitions), " +
-            "make a card for EVERY word — the 'q' is the word/term and the 'a' is the correct translation or definition. " +
-            "Fill in any missing translations or definitions with accurate answers. " +
-            "If the content is LECTURE NOTES or a TEXTBOOK passage, " +
-            "pick ONLY the major key terms, names, events, or concepts — the ones a teacher would put on a test. " +
-            "AIM FOR 5-15 CARDS MAX for lecture notes. Do NOT make a card for every sentence or detail. " +
-            "Be very selective. The 'q' should be a short term or name (not a full sentence). " +
-            "The 'a' should be a concise definition (1-2 sentences max). Use the definition from the content if given, otherwise write an accurate one. " +
-            "Return ONLY a JSON array of objects with \"q\" and \"a\" keys. No markdown, no explanation." +
-            (text ? "\n\nContent:\n" + text : "");
+    const makePrompt = (chunk) =>
+        "You are a study assistant making flashcards. Read the following content carefully. " +
+        "If the content is a VOCABULARY LIST or WORKSHEET (words in one language, or terms with blank/missing definitions), " +
+        "make a card for EVERY SINGLE word or term — do not skip any. The 'q' is the word/term and the 'a' is the correct translation or definition. " +
+        "Fill in any missing translations or definitions with accurate answers. " +
+        "If the content is LECTURE NOTES or a TEXTBOOK passage, " +
+        "extract ALL key terms, names, events, dates, and concepts that appear — the ones a teacher would put on a test. " +
+        "Do NOT skip or limit cards. Return one card per term. " +
+        "The 'q' should be a short term or name (not a full sentence). " +
+        "The 'a' should be a concise definition (1-2 sentences max). Use the definition from the content if given, otherwise write an accurate one. " +
+        "Return ONLY a JSON array of objects with \"q\" and \"a\" keys. No markdown, no explanation.\n\nContent:\n" + chunk;
 
-        let resultText = "";
-
+    const callAI = async (chunk) => {
         if (provider === "groq") {
-            // Groq API (OpenAI-compatible)
-            const fileNote = (hasFile && importFileData.text) ? "\n\n[Extracted file text]:\n" + importFileData.text : "";
             const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
                 body: JSON.stringify({
                     model: "llama-3.3-70b-versatile",
-                    messages: [{ role: "user", content: promptText + fileNote }],
-                    temperature: 0.2
+                    messages: [{ role: "user", content: makePrompt(chunk) }],
+                    temperature: 0.2,
+                    max_tokens: 4096
                 })
             });
             if (!response.ok) {
@@ -1611,20 +1707,15 @@ async function aiSortImport() {
                 const msg = err.error?.message || response.statusText;
                 if (response.status === 401 || response.status === 403) {
                     localStorage.removeItem("fc-groq-key");
-                    alert("Groq API key error: " + msg + "\n\nPlease enter a valid key.");
                     document.getElementById("ai-key-row").classList.remove("hidden");
                     document.getElementById("ai-key-hint").classList.remove("hidden");
-                } else { alert("Groq API error (" + response.status + "): " + msg); }
-                return;
+                }
+                throw new Error("Groq API error (" + response.status + "): " + msg);
             }
             const data = await response.json();
-            resultText = data.choices?.[0]?.message?.content || "";
+            return data.choices?.[0]?.message?.content || "";
         } else {
-            // Gemini API
-            const parts = [{ text: promptText }];
-            if (hasFile) {
-                parts.push({ inlineData: { mimeType: importFileData.mimeType, data: importFileData.base64 } });
-            }
+            const geminiParts = [{ text: makePrompt(chunk) }];
             const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
             let response = null;
             for (const model of models) {
@@ -1633,10 +1724,7 @@ async function aiSortImport() {
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ parts: parts }],
-                            generationConfig: { temperature: 0.2 }
-                        })
+                        body: JSON.stringify({ contents: [{ parts: geminiParts }], generationConfig: { temperature: 0.2 } })
                     }
                 );
                 if (response.ok) break;
@@ -1646,26 +1734,75 @@ async function aiSortImport() {
                 const msg = err.error?.message || response.statusText;
                 if (response.status === 400 || response.status === 403 || msg.includes("API_KEY")) {
                     localStorage.removeItem("fc-gemini-key");
-                    alert("Gemini API key error: " + msg + "\n\nPlease enter a valid key.");
                     document.getElementById("ai-key-row").classList.remove("hidden");
                     document.getElementById("ai-key-hint").classList.remove("hidden");
-                } else { alert("Gemini API error (" + response.status + "): " + msg); }
-                return;
+                }
+                throw new Error("Gemini API error (" + response.status + "): " + msg);
             }
             const data = await response.json();
-            resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        }
+    };
+
+    const parseResult = (resultText) => {
+        resultText = resultText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+        const parsed = JSON.parse(resultText);
+        return Array.isArray(parsed) ? parsed : [];
+    };
+
+    try {
+        let allCards = [];
+
+        if (hasFile) {
+            // File uploads: send as-is (can't chunk binary)
+            const geminiParts = [{ text: makePrompt("") }];
+            geminiParts.push({ inlineData: { mimeType: importFileData.mimeType, data: importFileData.base64 } });
+            const models = ["gemini-2.0-flash", "gemini-1.5-flash"];
+            let response = null;
+            for (const model of models) {
+                response = await fetch(
+                    "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + key,
+                    { method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contents: [{ parts: geminiParts }], generationConfig: { temperature: 0.2 } }) }
+                );
+                if (response.ok) break;
+            }
+            if (!response.ok) throw new Error("Gemini file error: " + response.status);
+            const data = await response.json();
+            const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            allCards = parseResult(resultText);
+        } else {
+            // Text: chunk into ~3000 char pieces split on word boundaries
+            const CHUNK_SIZE = 3000;
+            const chunks = [];
+            if (text.length <= CHUNK_SIZE) {
+                chunks.push(text);
+            } else {
+                let start = 0;
+                while (start < text.length) {
+                    let end = start + CHUNK_SIZE;
+                    if (end < text.length) {
+                        const boundary = text.lastIndexOf(" ", end);
+                        if (boundary > start) end = boundary;
+                    }
+                    chunks.push(text.slice(start, end).trim());
+                    start = end;
+                }
+            }
+            for (let i = 0; i < chunks.length; i++) {
+                btn.textContent = chunks.length > 1 ? "Sorting " + (i + 1) + "/" + chunks.length + "..." : "Sorting...";
+                const resultText = await callAI(chunks[i]);
+                const chunkCards = parseResult(resultText);
+                allCards = allCards.concat(chunkCards);
+            }
         }
 
-        // Strip markdown code fence if present
-        resultText = resultText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
-
-        const cards = JSON.parse(resultText);
-        if (!Array.isArray(cards) || cards.length === 0) {
+        if (allCards.length === 0) {
             alert("AI couldn't extract any cards from that text. Try different content.");
             return;
         }
 
-        aiSortedCards = cards.filter(c => c.q && c.a).map(c => ({ q: String(c.q).trim(), a: String(c.a).trim() }));
+        aiSortedCards = allCards.filter(c => c.q && c.a).map(c => ({ q: String(c.q).trim(), a: String(c.a).trim() }));
         const count = aiSortedCards.length;
         document.getElementById("quick-import-count").textContent = count + " card" + (count !== 1 ? "s" : "") + " detected (AI)";
 
@@ -1886,11 +2023,12 @@ function showTestQuestion() {
 
 function showTestMC(q) {
     document.getElementById("test-q-mc").classList.remove("hidden");
-    document.getElementById("test-mc-question").textContent = q.card.q;
+    const card = getCard(q.card);
+    document.getElementById("test-mc-question").textContent = card.q;
     const allCards = decks[currentDeckName];
-    const others = allCards.filter(c => c.a !== q.card.a).sort(() => Math.random() - 0.5);
-    const wrongOpts = others.slice(0, 3).map(c => c.a);
-    const options = [q.card.a, ...wrongOpts].sort(() => Math.random() - 0.5);
+    const others = allCards.filter(c => getCard(c).a !== card.a).sort(() => Math.random() - 0.5);
+    const wrongOpts = others.slice(0, 3).map(c => getCard(c).a);
+    const options = [card.a, ...wrongOpts].sort(() => Math.random() - 0.5);
     const container = document.getElementById("test-mc-options");
     container.innerHTML = "";
     options.forEach(opt => {
@@ -1901,13 +2039,13 @@ function showTestMC(q) {
             const btns = container.querySelectorAll(".mc-option");
             btns.forEach(b => {
                 b.disabled = true;
-                if (b.textContent === q.card.a) b.classList.add("mc-correct");
+                if (b.textContent === card.a) b.classList.add("mc-correct");
             });
-            const isCorrect = opt === q.card.a;
+            const isCorrect = opt === card.a;
             if (!isCorrect) btn.classList.add("mc-wrong");
             if (isCorrect) { testState.correct++; testState.mcCorrect++; }
             else { testState.wrong++; testState.mcWrong++; }
-            setTimeout(() => showTestFeedback(isCorrect, q.card.a), 600);
+            setTimeout(() => showTestFeedback(isCorrect, card.a), 600);
         };
         container.appendChild(btn);
     });
@@ -1923,7 +2061,8 @@ function showTestMatch(q) {
     defsContainer.innerHTML = "";
     const shuffledTerms = [...q.cards].sort(() => Math.random() - 0.5);
     const shuffledDefs = [...q.cards].sort(() => Math.random() - 0.5);
-    shuffledTerms.forEach((card, i) => {
+    shuffledTerms.forEach((rawCard, i) => {
+        const card = getCard(rawCard);
         const el = document.createElement("div");
         el.className = "test-match-term";
         el.textContent = card.q;
@@ -1936,7 +2075,8 @@ function showTestMatch(q) {
         el.ondragend = () => el.classList.remove("dragging");
         termsContainer.appendChild(el);
     });
-    shuffledDefs.forEach((card, i) => {
+    shuffledDefs.forEach((rawCard, i) => {
+        const card = getCard(rawCard);
         const el = document.createElement("div");
         el.className = "test-match-def";
         el.dataset.answer = card.q; // the correct term for this def
@@ -2027,7 +2167,7 @@ function submitMatching() {
 
 function showTestWrite(q) {
     document.getElementById("test-q-write").classList.remove("hidden");
-    document.getElementById("test-write-question").textContent = q.card.q;
+    document.getElementById("test-write-question").textContent = getCard(q.card).q;
     document.getElementById("test-write-input").value = "";
     setTimeout(() => document.getElementById("test-write-input").focus(), 100);
 }
@@ -2036,7 +2176,7 @@ function submitWritingAnswer() {
     const input = document.getElementById("test-write-input").value.trim();
     if (!input) return;
     const q = testState.questions[testState.currentIdx];
-    const correct = q.card.a;
+    const correct = getCard(q.card).a;
     const info = getTypeableInfo(correct);
     const normalize = s => s.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
     const isCorrect = normalize(input) === normalize(correct) || normalize(input) === normalize(info.simplified);

@@ -493,7 +493,7 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 }
 
 /* ========== PROGRESS ========== */
-.progress { margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted); }
+.progress { margin-bottom: 15px; font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .review-label { color: var(--wrong); font-weight: bold; display: none; }
 
 /* ========== CARD ========== */
@@ -530,6 +530,9 @@ h1 { font-size: 1.8rem; color: var(--accent); }
 .action-buttons { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center; }
 .shuffle-btn, .manage-btn { padding: 10px 20px; background: transparent; color: var(--text-muted); border: 1px solid var(--text-muted); border-radius: 10px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; }
 .shuffle-btn:hover, .manage-btn:hover { color: var(--text); border-color: var(--text); }
+.swap-btn { padding: 4px 10px; background: transparent; color: var(--text-muted); border: 1px solid var(--text-muted); border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: all 0.3s; margin-left: auto; }
+.swap-btn:hover { color: var(--text); border-color: var(--text); }
+.swap-btn.swap-active { background: linear-gradient(135deg, #fdcb6e, #e17055); color: #ffffff; border-color: transparent; }
 .learn-btn { padding: 10px 20px; background: linear-gradient(135deg, #6c5ce7, #e94560); color: #ffffff; border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: bold; transition: all 0.3s; }
 .learn-btn:hover { opacity: 0.85; }
 .review-btn { padding: 10px 20px; background: transparent; color: var(--wrong); border: 1px solid var(--wrong); border-radius: 10px; cursor: pointer; font-size: 0.9rem; transition: all 0.3s; display: none; }
@@ -1098,7 +1101,7 @@ h1 { font-size: 1.8rem; color: var(--accent); }
     .controls { gap: 16px; }
     .nav-btn, .wrong-btn, .right-btn { padding: 14px 32px; font-size: 1.1rem; }
     .action-buttons { gap: 14px; }
-    .shuffle-btn, .manage-btn, .learn-btn, .test-btn, .review-btn { padding: 12px 28px; font-size: 1rem; }
+    .shuffle-btn, .manage-btn, .learn-btn, .test-btn, .review-btn, .swap-btn { padding: 12px 28px; font-size: 1rem; }
     .score { font-size: 1.3rem; gap: 40px; }
     .keyboard-hints { font-size: 0.9rem; }
 
